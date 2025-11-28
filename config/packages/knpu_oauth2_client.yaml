@@ -1,0 +1,18 @@
+knpu_oauth2_client:
+    clients:
+        google:
+            # Tipo de proveedor OAuth
+            type: google
+
+            # Credenciales de Google Cloud Console
+            client_id: '%env(GOOGLE_CLIENT_ID)%'
+            client_secret: '%env(GOOGLE_CLIENT_SECRET)%'
+
+            # Ruta de callback después de la autenticación
+            redirect_route: auth_google_callback
+            redirect_params: {}
+
+            # Habilitar protección CSRF
+            use_state: true
+
+            # Los scopes se pasan en el controller (openid, email, profile)
