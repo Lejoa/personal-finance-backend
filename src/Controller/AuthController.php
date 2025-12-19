@@ -2,7 +2,9 @@
 
 namespace App\Controller;
 
+use App\Entity\RefreshToken;
 use App\Entity\User;
+use App\Repository\RefreshTokenRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
@@ -94,11 +96,15 @@ final class AuthController extends AbstractController
                 }
             }
 
-            // 7. Generar JWT propio para el usuario
-            $jwt = $jwtManager->create($user);
+            // 7. Generar JWT (access token )propio para el usuario
+            $accessToken = $jwtManager->create($user);
+            $refreshToken = $this->generateRefreshToken(
+                $user, 
+                $entityManager
+            );
 
-            // 8. Redirigir al frontend con el JWT en la URL
-            return new RedirectResponse("$frontendUrl/auth/callback?token=$jwt");
+            // 8. Redirigir al frontend con ambos tokens en la URL
+            return new RedirectResponse("$frontendUrl/auth/callback?token=$accessToken&refreshToken=$refreshToken");
 
         } catch (\Exception $e) {
             // En caso de error, redirigir al frontend con mensaje de error
@@ -134,4 +140,126 @@ final class AuthController extends AbstractController
             'createdAt' => $user->getCreatedAt()->format('Y-m-d H:i:s')
         ]);
     }
+
+    /**
+     * Endpoint para renovar el access token usando un refresh token
+     * Permite al cliente obtener un nuevo JWT sin re-autenticarse
+     */
+    #[Route('/api/token/refresh', name: 'api_token_refresh', methods: ['POST'])]
+    public function refreshToken(
+        Request $request,
+        RefreshTokenRepository $refreshTokenRepository,
+        JWTTokenManagerInterface $jwtManager,
+        EntityManagerInterface $entityManager
+    ): JsonResponse {
+
+        //Obtener refresh token del body de la petición
+        $datas = json_decode($request->getContent(), true);
+        $refreshTokenString = $datas['refreshToken'] ?? null;
+
+        if (!$refreshTokenString) {
+            return $this->json([
+                'error' => 'Missing refresh token',
+                'message' => 'Refresh token is required'
+            ], 400);
+        }
+
+        // Buscar el refresh token en la base de datos
+        $refreshToken = $refreshTokenRepository->findValidToken($refreshTokenString);
+
+        if(!$refreshToken) {
+            return $this->json([
+                'error' => 'Invalid refresh token',
+                'message' => 'The provided refresh token is invalid or expired'
+            ], 401);
+        }
+
+        // Obtener usuario asociado al refresh token
+        $user = $refreshToken->getUser();
+
+        // Generar nuevo acces token 
+        $newAccessToken = $jwtManager->create($user);
+
+        // Opcional: Generar nuevo refresh token (rotación de refresh tokens)
+        // Esto es más seguro pero requiere que el cliente maneje el nuevo refresh token
+        $newRefreshToken = $this->generateRefreshToken($user, $entityManager);
+
+        // Revocar el refresh token anterior (rotación)
+        $refreshToken->setIsRevoked(true);
+        $entityManager->flush();
+
+        // Retornar nuevos tokens
+        return $this->json([
+            'accessToken' => $newAccessToken,
+            'refreshToken' => $newRefreshToken,
+            'tokenType' => 'bearer',
+            'expiresIn' => 3600 // 1 hora
+        ]);
+    }
+
+    /**
+     * Endpoint para hacer logout y revocar el refresh token
+     */
+    #[Route('/api/auth/logout', name: 'api_auth_logout', methods: ['POST'])]
+    public function logout(
+        Request $request,
+        RefreshTokenRepository $refreshTokenRepository,
+        EntityManagerInterface $entityManager
+    ): JsonResponse {
+        // Obtener refresh token del body de la petición
+        $data = json_decode($request->getContent(), true);
+        $refreshTokenString = $data['refreshToken'] ?? null;
+
+        if ($refreshTokenString) {
+            // Buscar y revocar el refresh token
+            $refreshToken = $refreshTokenRepository->findValidToken($refreshTokenString);
+
+            if ($refreshToken) {
+                $refreshToken->setIsRevoked(true);
+                $entityManager->flush();
+            }
+        }
+
+        // También podemos revocar todos los tokens del usuario autenticado
+        $user = $this->getUser();
+        if ($user instanceof User) {
+            $refreshTokenRepository->revokeAllUserTokens($user);
+        }
+
+        // Retornar respuesta exitosa
+        return $this->json([
+            'message' => 'Successfully logged out'
+        ]);
+    }
+
+    /**
+     * Generar un nuevo refresh token para un usuario
+     * 
+     * @param User $user Usuario para el cual generar el refresh token
+     * @param EntityManagerInterface $entityManager Entity manager para persistir el token
+     * @return string El refresh token generado
+     */
+    private function generateRefreshToken(
+        User $user,
+        EntityManagerInterface $entityManager): string {
+
+            // Generar token aleatorio seguro
+            $tokenString = bin2hex(random_bytes(64));
+
+            // Crear entidad RefreshToken
+            $refreshToken = new RefreshToken();
+            $refreshToken->setUser($user);
+            $refreshToken->setToken($tokenString);
+
+            // Establecer fecha de expiración (ej. 30 días desde ahora)
+            $expiresAt = new \DateTime();
+            $expiresAt->modify('+30 days');
+            $refreshToken->setExpiresAt($expiresAt);
+
+            // Persistir en la base de datos
+            $entityManager->persist($refreshToken);
+            $entityManager->flush();
+
+            return $tokenString;
+        }
 }
