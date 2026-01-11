@@ -20,6 +20,8 @@ security:
 
     # Control de acceso
     access_control:
+        # Endpoint de refresh token debe ser público (se llama cuando el JWT expiró)
+        - { path: ^/api/token/refresh, roles: PUBLIC_ACCESS }
         #Rutas públicas (OAuth login y callback)
         - { path: ^/auth, roles: PUBLIC_ACCESS }
         #Rutas privadas (requieren JWT Válido)
