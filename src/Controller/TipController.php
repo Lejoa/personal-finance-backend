@@ -2,9 +2,9 @@
 
 namespace App\Controller;
 
-use App\DTO\CreateCategoryRequest;
-use App\DTO\UpdateCategoryRequest;
-use App\Service\CategoryService;
+use App\DTO\CreateTipRequest;
+use App\DTO\UpdateTipRequest;
+use App\Service\TipService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -14,27 +14,27 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-#[Route('/api/categories')]
+#[Route('/api/tips')]
 #[IsGranted('ROLE_USER')]
-class CategoryController extends AbstractController
+class TipController extends AbstractController
 {
     public function __construct(
-        private readonly CategoryService $categoryService,
+        private readonly TipService $tipService,
         private readonly SerializerInterface $serializer,
         private readonly ValidatorInterface $validator
     ) {
     }
 
     /**
-     * Create a new category
+     * Create a new tip
      */
-    #[Route('', name: 'api_category_create', methods: ['POST'])]
+    #[Route('', name: 'api_tip_create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
         try {
             $dto = $this->serializer->deserialize(
                 $request->getContent(),
-                CreateCategoryRequest::class,
+                CreateTipRequest::class,
                 'json'
             );
 
@@ -46,71 +46,71 @@ class CategoryController extends AbstractController
                 );
             }
 
-            $category = $this->categoryService->createCategory($dto);
+            $tip = $this->tipService->createTip($dto);
 
             return $this->json(
                 [
-                    'message' => 'Categoría creada exitosamente',
-                    'category' => $this->serializeCategory($category)
+                    'message' => 'Tip creado exitosamente',
+                    'tip' => $this->serializeTip($tip)
                 ],
                 Response::HTTP_CREATED
             );
         } catch (\Exception $e) {
             return $this->json(
-                ['error' => 'Error al crear categoría', 'message' => $e->getMessage()],
+                ['error' => 'Error al crear tip', 'message' => $e->getMessage()],
                 Response::HTTP_INTERNAL_SERVER_ERROR
             );
         }
     }
 
     /**
-     * Get all categories
+     * Get all tips
      */
-    #[Route('', name: 'api_category_list', methods: ['GET'])]
+    #[Route('', name: 'api_tip_list', methods: ['GET'])]
     public function getAll(): JsonResponse
     {
-        $categories = $this->categoryService->getAllCategories();
+        $tips = $this->tipService->getAllTips();
 
         return $this->json([
             'data' => array_map(
-                fn($category) => $this->serializeCategory($category),
-                $categories
+                fn($tip) => $this->serializeTip($tip),
+                $tips
             ),
-            'total' => count($categories)
+            'total' => count($tips)
         ]);
     }
 
     /**
-     * Get a specific category by ID
+     * Get a specific tip by ID
      */
-    #[Route('/{id}', name: 'api_category_show', methods: ['GET'])]
+    #[Route('/{id}', name: 'api_tip_show', methods: ['GET'])]
     public function show(int $id): JsonResponse
     {
-        $category = $this->categoryService->getCategoryById($id);
+        $tip = $this->tipService->getTipById($id);
 
-        if (!$category) {
+        if (!$tip) {
             return $this->json(
-                ['error' => 'Categoría no encontrada'],
+                ['error' => 'Tip no encontrado'],
                 Response::HTTP_NOT_FOUND
             );
         }
 
         return $this->json([
-            'category' => $this->serializeCategory($category)
+            'tip' => $this->serializeTip($tip)
         ]);
     }
 
     /**
-     * Update an existing category
+     * Update an existing tip
      */
-    #[Route('/{id}', name: 'api_category_update', methods: ['PUT', 'PATCH'])]
+    #[Route('/{id}', name: 'api_tip_update', methods: ['PUT', 'PATCH'])]
     public function update(int $id, Request $request): JsonResponse
     {
-        $category = $this->categoryService->getCategoryById($id);
+        $tip = $this->tipService->getTipById($id);
 
-        if (!$category) {
+        if (!$tip) {
             return $this->json(
-                ['error' => 'Categoría no encontrada'],
+                ['error' => 'Tip no encontrado'],
                 Response::HTTP_NOT_FOUND
             );
         }
@@ -118,7 +118,7 @@ class CategoryController extends AbstractController
         try {
             $dto = $this->serializer->deserialize(
                 $request->getContent(),
-                UpdateCategoryRequest::class,
+                UpdateTipRequest::class,
                 'json'
             );
 
@@ -130,44 +130,44 @@ class CategoryController extends AbstractController
                 );
             }
 
-            $updatedCategory = $this->categoryService->updateCategory($category, $dto);
+            $updatedTip = $this->tipService->updateTip($tip, $dto);
 
             return $this->json([
-                'message' => 'Categoría actualizada exitosamente',
-                'category' => $this->serializeCategory($updatedCategory)
+                'message' => 'Tip actualizado exitosamente',
+                'tip' => $this->serializeTip($updatedTip)
             ]);
         } catch (\Exception $e) {
             return $this->json(
-                ['error' => 'Error al actualizar categoría', 'message' => $e->getMessage()],
+                ['error' => 'Error al actualizar tip', 'message' => $e->getMessage()],
                 Response::HTTP_INTERNAL_SERVER_ERROR
             );
         }
     }
 
     /**
-     * Delete a category
+     * Delete a tip
      */
-    #[Route('/{id}', name: 'api_category_delete', methods: ['DELETE'])]
+    #[Route('/{id}', name: 'api_tip_delete', methods: ['DELETE'])]
     public function delete(int $id): JsonResponse
     {
-        $category = $this->categoryService->getCategoryById($id);
+        $tip = $this->tipService->getTipById($id);
 
-        if (!$category) {
+        if (!$tip) {
             return $this->json(
-                ['error' => 'Categoría no encontrada'],
+                ['error' => 'Tip no encontrado'],
                 Response::HTTP_NOT_FOUND
             );
         }
 
         try {
-            $this->categoryService->deleteCategory($category);
+            $this->tipService->deleteTip($tip);
 
             return $this->json([
-                'message' => 'Categoría eliminada exitosamente'
+                'message' => 'Tip eliminado exitosamente'
             ]);
         } catch (\Exception $e) {
             return $this->json(
-                ['error' => 'Error al eliminar categoría', 'message' => $e->getMessage()],
+                ['error' => 'Error al eliminar tip', 'message' => $e->getMessage()],
                 Response::HTTP_INTERNAL_SERVER_ERROR
             );
         }
@@ -186,15 +186,16 @@ class CategoryController extends AbstractController
     }
 
     /**
-     * Serialize category to array
+     * Serialize tip to array
      */
-    private function serializeCategory($category): array
+    private function serializeTip($tip): array
     {
         return [
-            'id' => $category->getId(),
-            'name' => $category->getName(),
-            'description' => $category->getDescription(),
-            'createdAt' => $category->getCreatedAt()->format('Y-m-d H:i:s')
+            'id' => $tip->getId(),
+            'title' => $tip->getTitle(),
+            'author' => $tip->getAuthor(),
+            'description' => $tip->getDescription(),
+            'createdAt' => $tip->getCreatedAt()->format('Y-m-d H:i:s')
         ];
     }
 }

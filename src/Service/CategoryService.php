@@ -22,8 +22,8 @@ class CategoryService
     public function createCategory(CreateCategoryRequest $dto): Category
     {
         $category = new Category();
-        $category->setNombre($dto->nombre);
-        $category->setDescripcion($dto->descripcion);
+        $category->setName($dto->name);
+        $category->setDescription($dto->description);
 
         $this->entityManager->persist($category);
         $this->entityManager->flush();
@@ -36,12 +36,12 @@ class CategoryService
      */
     public function updateCategory(Category $category, UpdateCategoryRequest $dto): Category
     {
-        if ($dto->nombre !== null) {
-            $category->setNombre($dto->nombre);
+        if ($dto->name !== null) {
+            $category->setName($dto->name);
         }
 
-        if ($dto->descripcion !== null) {
-            $category->setDescripcion($dto->descripcion);
+        if ($dto->description !== null) {
+            $category->setDescription($dto->description);
         }
 
         $this->entityManager->flush();

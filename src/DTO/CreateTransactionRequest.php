@@ -13,7 +13,7 @@ class CreateTransactionRequest
         max: 255,
         maxMessage: 'El nombre no puede tener más de {{ limit }} caracteres.'
     )]
-    public ?string $nombre = null;
+    public ?string $name = null;
 
     #[Assert\NotBlank(
         message: 'El tipo es obligatorio.'
@@ -22,7 +22,7 @@ class CreateTransactionRequest
         choices: ['ingreso', 'gasto'],
         message: 'El tipo debe ser "ingreso" o "gasto".'
     )]
-    public ?string $tipo = null;
+    public ?string $type = null;
 
     #[Assert\NotBlank(
         message: 'El monto es obligatorio.'
@@ -34,7 +34,7 @@ class CreateTransactionRequest
         value: 0,
         message: 'El monto debe ser mayor a cero.'
     )]
-    public ?float $monto = null;
+    public ?float $amount = null;
 
     #[Assert\NotBlank(
         message: 'La fecha es obligatoria.'
@@ -43,12 +43,12 @@ class CreateTransactionRequest
         'today',
         message: 'La fecha no puede ser futura.'
     )]
-    public ?string $fecha = null;
+    public ?string $date = null;
 
     #[Assert\Length(
         max: 500,
         maxMessage: 'La descripción no puede tener más de {{ limit }} caracteres.'
     )]
-    public ?string $nota = null;
+    public ?string $note = null;
 
 }

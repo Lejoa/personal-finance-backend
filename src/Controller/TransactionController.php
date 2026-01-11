@@ -76,8 +76,8 @@ class TransactionController extends AbstractController
         /** @var User $user */
         $user = $this->getUser();
         
-        $tipo = $request->query->get('tipo');
-        $transactions = $this->transactionService->getUserTransactions($user, $tipo);
+        $type = $request->query->get('type');
+        $transactions = $this->transactionService->getUserTransactions($user, $type);
 
         return $this->json([
             'data' => array_map(
@@ -209,11 +209,11 @@ class TransactionController extends AbstractController
     {
         return [
             'id' => $transaction->getId(),
-            'nombre' => $transaction->getNombre(),
-            'tipo' => $transaction->getTipo(),
-            'monto' => $transaction->getMonto(),
-            'fecha' => $transaction->getFecha()->format('Y-m-d'),
-            'nota' => $transaction->getNota(),
+            'name' => $transaction->getName(),
+            'type' => $transaction->getType(),
+            'amount' => $transaction->getAmount(),
+            'date' => $transaction->getDate()->format('Y-m-d'),
+            'note' => $transaction->getNote(),
             'createdAt' => $transaction->getCreatedAt()->format('Y-m-d H:i:s')
         ];
     }

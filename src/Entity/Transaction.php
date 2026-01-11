@@ -22,7 +22,7 @@ class Transaction
         max: 255,
         maxMessage: 'El nombre no puede exceder {{ limit }} caracteres'
     )]
-    private ?string $nombre = null;
+    private ?string $name = null;
 
     #[ORM\Column(length: 10)]
     #[Assert\NotBlank(message: 'El tipo es obligatorio')]
@@ -30,13 +30,13 @@ class Transaction
         choices: ['ingreso', 'gasto'],
         message: 'El tipo debe ser "ingreso" o "gasto"'
     )]
-    private ?string $tipo = null;
+    private ?string $type = null;
 
     #[ORM\Column(type: Types::FLOAT)]
     #[Assert\NotBlank(message: 'El monto es obligatorio')]
     #[Assert\Positive(message: 'El monto debe ser mayor a cero')]
     #[Assert\GreaterThan(value: 0, message: 'El monto debe ser mayor a cero')]
-    private ?float $monto = null;
+    private ?float $amount = null;
 
     #[ORM\Column(type: Types::DATE_MUTABLE)]
     #[Assert\NotBlank(message: 'La fecha es obligatoria')]
@@ -44,10 +44,10 @@ class Transaction
         'today',
         message: 'La fecha no puede ser futura'
     )]
-    private ?\DateTimeInterface $fecha = null;
+    private ?\DateTimeInterface $date = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $nota = null;
+    private ?string $note = null;
 
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(nullable: false)]
@@ -71,58 +71,58 @@ class Transaction
         return $this->id;
     }
 
-    public function getNombre(): ?string
+    public function getName(): ?string
     {
-        return $this->nombre;
+        return $this->name;
     }
 
-    public function setNombre(string $nombre): static
+    public function setName(string $name): static
     {
-        $this->nombre = $nombre;
+        $this->name = $name;
         return $this;
     }
 
-    public function getTipo(): ?string
+    public function getType(): ?string
     {
-        return $this->tipo;
+        return $this->type;
     }
 
-    public function setTipo(string $tipo): static
+    public function setType(string $type): static
     {
-        $this->tipo = $tipo;
+        $this->type = $type;
         return $this;
     }
 
-    public function getMonto(): ?float
+    public function getAmount(): ?float
     {
-        return $this->monto;
+        return $this->amount;
     }
 
-    public function setMonto(float $monto): static
+    public function setAmount(float $amount): static
     {
-        $this->monto = $monto;
+        $this->amount = $amount;
         return $this;
     }
 
-    public function getFecha(): ?\DateTimeInterface
+    public function getDate(): ?\DateTimeInterface
     {
-        return $this->fecha;
+        return $this->date;
     }
 
-    public function setFecha(\DateTimeInterface $fecha): static
+    public function setDate(\DateTimeInterface $date): static
     {
-        $this->fecha = $fecha;
+        $this->date = $date;
         return $this;
     }
 
-    public function getNota(): ?string
+    public function getNote(): ?string
     {
-        return $this->nota;
+        return $this->note;
     }
 
-    public function setNota(?string $nota): static
+    public function setNote(?string $note): static
     {
-        $this->nota = $nota;
+        $this->note = $note;
         return $this;
     }
 

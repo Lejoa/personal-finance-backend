@@ -10,11 +10,11 @@ class UpdateCategoryRequest
         max: 255,
         maxMessage: 'El nombre no puede tener más de {{ limit }} caracteres.'
     )]
-    public ?string $nombre = null;
+    public ?string $name = null;
 
     #[Assert\Length(
         max: 1000,
         maxMessage: 'La descripción no puede tener más de {{ limit }} caracteres.'
     )]
-    public ?string $descripcion = null;
+    public ?string $description = null;
 }

@@ -24,13 +24,13 @@ class TransactionService
     {
         $transaction = new Transaction();
         $transaction->setUser($user);
-        $transaction->setNombre($dto->nombre);
-        $transaction->setTipo($dto->tipo);
-        $transaction->setMonto($dto->monto);
-        $transaction->setFecha(new \DateTime($dto->fecha));
+        $transaction->setName($dto->name);
+        $transaction->setType($dto->type);
+        $transaction->setAmount($dto->amount);
+        $transaction->setDate(new \DateTime($dto->date));
 
-        if ($dto->nota) {
-            $transaction->setNota($dto->nota);
+        if ($dto->note) {
+            $transaction->setNote($dto->note);
         }
 
         $this->entityManager->persist($transaction);
@@ -44,29 +44,29 @@ class TransactionService
      */
     public function updateTransaction(Transaction $transaction, UpdateTransactionRequest $dto): Transaction
     {
-        if ($dto->nombre !== null) {
-            $transaction->setNombre($dto->nombre);
+        if ($dto->name !== null) {
+            $transaction->setName($dto->name);
         }
 
-        if ($dto->tipo !== null) {
-            $transaction->setTipo($dto->tipo);
+        if ($dto->type !== null) {
+            $transaction->setType($dto->type);
         }
 
-        if ($dto->monto !== null) {
-            $transaction->setMonto($dto->monto);
+        if ($dto->amount !== null) {
+            $transaction->setAmount($dto->amount);
         }
 
-        if ($dto->fecha !== null) {
+        if ($dto->date !== null) {
             try {
-                $fecha = new \DateTime($dto->fecha);
-                $transaction->setFecha($fecha);
+                $date = new \DateTime($dto->date);
+                $transaction->setDate($date);
             } catch (\Exception $e) {
                 throw new \InvalidArgumentException('Formato de fecha inválido. Use YYYY-MM-DD');
             }
         }
 
-        if ($dto->nota !== null) {
-            $transaction->setNota($dto->nota);
+        if ($dto->note !== null) {
+            $transaction->setNote($dto->note);
         }
 
         $this->entityManager->flush();
@@ -86,12 +86,12 @@ class TransactionService
     /**
      * Get all transactions for a user with optional type filter
      */
-    public function getUserTransactions(User $user, ?string $tipo = null): array
+    public function getUserTransactions(User $user, ?string $type = null): array
     {
         $criteria = ['user' => $user];
 
-        if ($tipo) {
-            $criteria['tipo'] = $tipo;
+        if ($type) {
+            $criteria['type'] = $type;
         }
 
         return $this->transactionRepository->findBy(
