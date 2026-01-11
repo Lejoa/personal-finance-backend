@@ -27,8 +27,8 @@ class Transaction
     #[ORM\Column(length: 10)]
     #[Assert\NotBlank(message: 'El tipo es obligatorio')]
     #[Assert\Choice(
-        choices: ['Ingreso', 'Gasto'],
-        message: 'El tipo debe ser "Ingreso" o "Gasto"'
+        choices: ['ingreso', 'gasto'],
+        message: 'El tipo debe ser "ingreso" o "gasto"'
     )]
     private ?string $tipo = null;
 
@@ -53,6 +53,10 @@ class Transaction
     #[ORM\JoinColumn(nullable: false)]
     #[Assert\NotNull(message: 'El usuario es obligatorio')]
     private ?User $user = null;
+
+    #[ORM\ManyToOne(targetEntity: Category::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Category $category = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $createdAt = null;
@@ -130,6 +134,17 @@ class Transaction
     public function setUser(?User $user): static
     {
         $this->user = $user;
+        return $this;
+    }
+
+    public function getCategory(): ?Category
+    {
+        return $this->category;
+    }
+
+    public function setCategory(?Category $category): static
+    {
+        $this->category = $category;
         return $this;
     }
 
