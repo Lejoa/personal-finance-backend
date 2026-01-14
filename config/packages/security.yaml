@@ -22,6 +22,8 @@ security:
     access_control:
         # Endpoint de refresh token debe ser público (se llama cuando el JWT expiró)
         - { path: ^/api/token/refresh, roles: PUBLIC_ACCESS }
+        # Endpoints de desarrollo (solo disponibles en APP_ENV=dev)
+        - { path: ^/api/dev, roles: PUBLIC_ACCESS }
         #Rutas públicas (OAuth login y callback)
         - { path: ^/auth, roles: PUBLIC_ACCESS }
         #Rutas privadas (requieren JWT Válido)
