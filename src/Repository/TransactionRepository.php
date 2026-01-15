@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Transaction;
+use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -16,28 +17,41 @@ class TransactionRepository extends ServiceEntityRepository
         parent::__construct($registry, Transaction::class);
     }
 
-    //    /**
-    //     * @return Transaction[] Returns an array of Transaction objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('t')
-    //            ->andWhere('t.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('t.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    /**
+     * Find transactions with filters: type, date range and limit
+     * @return Transaction[]
+     */
+    public function findByFilters(
+        User $user,
+        ?string $type = null,
+        ?\DateTimeInterface $startDate = null,
+        ?\DateTimeInterface $endDate = null,
+        ?int $limit = null
+    ): array {
+        $qb = $this->createQueryBuilder('t')
+            ->where('t.user = :user')
+            ->setParameter('user', $user)
+            ->orderBy('t.createdAt', 'DESC');
 
-    //    public function findOneBySomeField($value): ?Transaction
-    //    {
-    //        return $this->createQueryBuilder('t')
-    //            ->andWhere('t.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+        if ($type !== null) {
+            $qb->andWhere('t.type = :type')
+               ->setParameter('type', $type);
+        }
+
+        if ($startDate !== null) {
+            $qb->andWhere('t.date >= :startDate')
+               ->setParameter('startDate', $startDate);
+        }
+
+        if ($endDate !== null) {
+            $qb->andWhere('t.date <= :endDate')
+               ->setParameter('endDate', $endDate);
+        }
+
+        if ($limit !== null) {
+            $qb->setMaxResults($limit);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
 }

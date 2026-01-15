@@ -68,16 +68,26 @@ class TransactionController extends AbstractController
     }
 
     /**
-     * Get all transactions for authenticated user
+     * Get all transactions for authenticated user with optional filters
      */
     #[Route('', name: 'api_transaction_list', methods: ['GET'])]
     public function getAll(Request $request): JsonResponse
     {
         /** @var User $user */
         $user = $this->getUser();
-        
+
         $type = $request->query->get('type');
-        $transactions = $this->transactionService->getUserTransactions($user, $type);
+        $startDate = $request->query->get('startDate');
+        $endDate = $request->query->get('endDate');
+        $limit = $request->query->get('limit');
+
+        $transactions = $this->transactionService->getUserTransactions(
+            $user,
+            $type,
+            $startDate,
+            $endDate,
+            $limit ? (int) $limit : null
+        );
 
         return $this->json([
             'data' => array_map(

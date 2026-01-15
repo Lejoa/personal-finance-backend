@@ -84,19 +84,24 @@ class TransactionService
     }
 
     /**
-     * Get all transactions for a user with optional type filter
+     * Get all transactions for a user with optional filters
      */
-    public function getUserTransactions(User $user, ?string $type = null): array
-    {
-        $criteria = ['user' => $user];
+    public function getUserTransactions(
+        User $user,
+        ?string $type = null,
+        ?string $startDate = null,
+        ?string $endDate = null,
+        ?int $limit = null
+    ): array {
+        $start = $startDate ? new \DateTime($startDate) : null;
+        $end = $endDate ? new \DateTime($endDate) : null;
 
-        if ($type) {
-            $criteria['type'] = $type;
-        }
-
-        return $this->transactionRepository->findBy(
-            $criteria,
-            ['createdAt' => 'DESC']
+        return $this->transactionRepository->findByFilters(
+            $user, 
+            $type, 
+            $start, 
+            $end, 
+            $limit
         );
     }
 

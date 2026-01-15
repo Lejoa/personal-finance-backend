@@ -32,6 +32,14 @@ class Category
     )]
     private ?string $description = null;
 
+    #[ORM\Column(length: 10)]
+    #[Assert\NotBlank(message: 'El tipo es obligatorio')]
+    #[Assert\Choice(
+        choices: ['ingreso', 'gasto'],
+        message: 'El tipo debe ser "ingreso" o "gasto"'
+    )]
+    private ?string $type = null;
+
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $createdAt = null;
 
@@ -64,6 +72,17 @@ class Category
     public function setDescription(string $description): static
     {
         $this->description = $description;
+        return $this;
+    }
+
+    public function getType(): ?string
+    {
+        return $this->type;
+    }
+
+    public function setType(string $type): static
+    {
+        $this->type = $type;
         return $this;
     }
 
