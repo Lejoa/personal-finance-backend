@@ -38,4 +38,7 @@ class UpdateTransactionRequest
         maxMessage: 'La descripción no puede tener más de {{ limit }} caracteres.'
     )]
     public ?string $note = null;
+
+    #[Assert\Positive(message: 'El ID de categoría debe ser positivo')]
+    public ?int $categoryId = null;
 }

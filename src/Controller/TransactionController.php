@@ -217,6 +217,8 @@ class TransactionController extends AbstractController
      */
     private function serializeTransaction($transaction): array
     {
+        $category = $transaction->getCategory();
+
         return [
             'id' => $transaction->getId(),
             'name' => $transaction->getName(),
@@ -224,6 +226,8 @@ class TransactionController extends AbstractController
             'amount' => $transaction->getAmount(),
             'date' => $transaction->getDate()->format('Y-m-d'),
             'note' => $transaction->getNote(),
+            'categoryId' => $category?->getId(),
+            'categoryName' => $category?->getName(),
             'createdAt' => $transaction->getCreatedAt()->format('Y-m-d H:i:s')
         ];
     }

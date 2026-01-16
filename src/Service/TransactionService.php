@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\DTO\CreateTransactionRequest;
 use App\DTO\UpdateTransactionRequest;
+use App\Entity\Category;
 use App\Entity\Transaction;
 use App\Entity\User;
 use App\Repository\TransactionRepository;
@@ -67,6 +68,13 @@ class TransactionService
 
         if ($dto->note !== null) {
             $transaction->setNote($dto->note);
+        }
+
+        if ($dto->categoryId !== null) {
+            $category = $this->entityManager->getRepository(Category::class)->find($dto->categoryId);
+            if ($category) {
+                $transaction->setCategory($category);
+            }
         }
 
         $this->entityManager->flush();
