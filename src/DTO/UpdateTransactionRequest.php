@@ -41,4 +41,6 @@ class UpdateTransactionRequest
 
     #[Assert\Positive(message: 'El ID de categoría debe ser positivo')]
     public ?int $categoryId = null;
+
+    public ?bool $synchronized = null;
 }

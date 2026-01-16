@@ -77,6 +77,10 @@ class TransactionService
             }
         }
 
+        if ($dto->synchronized !== null) {
+            $transaction->setSynchronized($dto->synchronized);
+        }
+
         $this->entityManager->flush();
 
         return $transaction;

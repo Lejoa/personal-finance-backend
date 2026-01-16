@@ -55,6 +55,7 @@ class TransactionFixtures extends Fixture
             $transaction->setType($type);
             $transaction->setAmount($this->generateAmount($isExpense));
             $transaction->setDate($this->generateRandomDate());
+            $transaction->setSynchronized(rand(0, 100) < 70);
 
             if (isset($categoriesMap[$categoryName])) {
                 $transaction->setCategory($categoriesMap[$categoryName]);

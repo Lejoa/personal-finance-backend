@@ -61,9 +61,13 @@ class Transaction
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $createdAt = null;
 
+    #[ORM\Column(type: Types::BOOLEAN)]
+    private bool $synchronized = false;
+
     public function __construct()
     {
         $this->createdAt = new \DateTime();
+        $this->synchronized = false;
     }
 
     public function getId(): ?int
@@ -156,6 +160,17 @@ class Transaction
     public function setCreatedAt(\DateTimeInterface $createdAt): static
     {
         $this->createdAt = $createdAt;
+        return $this;
+    }
+
+    public function isSynchronized(): bool
+    {
+        return $this->synchronized;
+    }
+
+    public function setSynchronized(bool $synchronized): static
+    {
+        $this->synchronized = $synchronized;
         return $this;
     }
 }
