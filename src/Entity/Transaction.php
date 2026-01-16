@@ -61,13 +61,13 @@ class Transaction
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $createdAt = null;
 
-    #[ORM\Column(type: Types::BOOLEAN)]
-    private bool $synchronized = false;
+    #[ORM\Column(length: 10)]
+    private string $synchronized = 'pending';
 
     public function __construct()
     {
         $this->createdAt = new \DateTime();
-        $this->synchronized = false;
+        $this->synchronized = 'pending';
     }
 
     public function getId(): ?int
@@ -163,12 +163,12 @@ class Transaction
         return $this;
     }
 
-    public function isSynchronized(): bool
+    public function getSynchronized(): string
     {
         return $this->synchronized;
     }
 
-    public function setSynchronized(bool $synchronized): static
+    public function setSynchronized(string $synchronized): static
     {
         $this->synchronized = $synchronized;
         return $this;

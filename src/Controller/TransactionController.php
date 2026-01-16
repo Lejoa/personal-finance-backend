@@ -80,13 +80,15 @@ class TransactionController extends AbstractController
         $startDate = $request->query->get('startDate');
         $endDate = $request->query->get('endDate');
         $limit = $request->query->get('limit');
+        $sync = $request->query->get('sync');
 
         $transactions = $this->transactionService->getUserTransactions(
             $user,
             $type,
             $startDate,
             $endDate,
-            $limit ? (int) $limit : null
+            $limit ? (int) $limit : null,
+            $sync
         );
 
         return $this->json([
@@ -228,7 +230,7 @@ class TransactionController extends AbstractController
             'note' => $transaction->getNote(),
             'categoryId' => $category?->getId(),
             'categoryName' => $category?->getName(),
-            'synchronized' => $transaction->isSynchronized(),
+            'synchronized' => $transaction->getSynchronized(),
             'createdAt' => $transaction->getCreatedAt()->format('Y-m-d H:i:s')
         ];
     }

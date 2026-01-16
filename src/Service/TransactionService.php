@@ -103,17 +103,19 @@ class TransactionService
         ?string $type = null,
         ?string $startDate = null,
         ?string $endDate = null,
-        ?int $limit = null
+        ?int $limit = null,
+        ?bool $synchronized = null
     ): array {
         $start = $startDate ? new \DateTime($startDate) : null;
         $end = $endDate ? new \DateTime($endDate) : null;
 
         return $this->transactionRepository->findByFilters(
-            $user, 
-            $type, 
-            $start, 
-            $end, 
-            $limit
+            $user,
+            $type,
+            $start,
+            $end,
+            $limit,
+            $synchronized
         );
     }
 

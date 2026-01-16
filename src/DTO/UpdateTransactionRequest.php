@@ -42,5 +42,9 @@ class UpdateTransactionRequest
     #[Assert\Positive(message: 'El ID de categoría debe ser positivo')]
     public ?int $categoryId = null;
 
-    public ?bool $synchronized = null;
+    #[Assert\Choice(
+        choices: ['pending', 'done', 'rejected'],
+        message: 'El estado debe ser "pending", "done" o "rejected".'
+    )]
+    public ?string $synchronized = null;
 }

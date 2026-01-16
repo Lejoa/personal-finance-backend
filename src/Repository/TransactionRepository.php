@@ -26,7 +26,8 @@ class TransactionRepository extends ServiceEntityRepository
         ?string $type = null,
         ?\DateTimeInterface $startDate = null,
         ?\DateTimeInterface $endDate = null,
-        ?int $limit = null
+        ?int $limit = null,
+        ?string $synchronized = null
     ): array {
         $qb = $this->createQueryBuilder('t')
             ->where('t.user = :user')
@@ -46,6 +47,11 @@ class TransactionRepository extends ServiceEntityRepository
         if ($endDate !== null) {
             $qb->andWhere('t.date <= :endDate')
                ->setParameter('endDate', $endDate);
+        }
+
+        if ($synchronized !== null) {
+            $qb->andWhere('t.synchronized = :synchronized')
+               ->setParameter('synchronized', $synchronized);
         }
 
         if ($limit !== null) {
