@@ -104,7 +104,7 @@ class TransactionService
         ?string $startDate = null,
         ?string $endDate = null,
         ?int $limit = null,
-        ?bool $synchronized = null
+        ?string $synchronized = null
     ): array {
         $start = $startDate ? new \DateTime($startDate) : null;
         $end = $endDate ? new \DateTime($endDate) : null;

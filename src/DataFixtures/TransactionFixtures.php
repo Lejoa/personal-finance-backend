@@ -15,8 +15,8 @@ class TransactionFixtures extends Fixture
 
     private array $keyValuesExpenses = [
         'Alimentos' => ['Supermercado', 'Restaurante', 'Comida rápida', 'Café', 'Delivery'],
-        'Transporte' => ['Gasolina', 'Transporte público', 'Uber', 'Mantenimiento auto', 'Parking'],
-        'Entretenimiento' => ['Netflix', 'Spotify', 'Cine', 'Teatro', 'Concierto', 'Videojuegos'],
+        'Transporte' => ['Gasolina', 'Transporte público', 'Mantenimiento auto'],
+        'Entretenimiento' => ['Cine', 'Teatro', 'Concierto', 'Videojuegos', 'Citas de pareja'],
         'Salud' => ['Farmacia', 'Dentista', 'Médico', 'Seguro'],
         'Educación' => ['Libros', 'Curso online'],
         'Otros' => ['Regalos', 'Colaboración', 'Lavandería', 'Peluquería']
@@ -27,6 +27,12 @@ class TransactionFixtures extends Fixture
         'Freelance' => ['Freelance proyecto', 'Trabajo extra', 'Consultoría'],
         'Inversiones' => ['Dividendos', 'Intereses banco'],
         'Ventas' => ['Venta artículos', 'Reembolso', 'Devolución impuestos']
+    ];
+
+    private array $syncStatus = [
+        'pending',
+        'done',
+        'rejected'
     ];
 
     public function load(ObjectManager $manager): void
@@ -55,7 +61,8 @@ class TransactionFixtures extends Fixture
             $transaction->setType($type);
             $transaction->setAmount($this->generateAmount($isExpense));
             $transaction->setDate($this->generateRandomDate());
-            $transaction->setSynchronized(rand(0, 100) < 70);
+            $keyRand =array_rand($this->syncStatus);
+            $transaction->setSynchronized($this->syncStatus[$keyRand]);
 
             if (isset($categoriesMap[$categoryName])) {
                 $transaction->setCategory($categoriesMap[$categoryName]);

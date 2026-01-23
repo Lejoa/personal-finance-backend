@@ -51,4 +51,10 @@ class CreateTransactionRequest
     )]
     public ?string $note = null;
 
+    #[Assert\Choice(
+        choices: ['pending', 'done', 'rejected'],
+        message: 'El estado debe ser "pending", "done" o "rejected".'
+    )]
+    public ?string $synchronized = null; 
+
 }
