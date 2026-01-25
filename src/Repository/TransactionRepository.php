@@ -32,7 +32,8 @@ class TransactionRepository extends ServiceEntityRepository
         $qb = $this->createQueryBuilder('t')
             ->where('t.user = :user')
             ->setParameter('user', $user)
-            ->orderBy('t.createdAt', 'DESC');
+            ->orderBy('t.date', 'DESC')
+            ->addOrderBy('t.createdAt', 'DESC');
 
         if ($type !== null) {
             $qb->andWhere('t.type = :type')
