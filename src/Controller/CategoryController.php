@@ -67,9 +67,15 @@ class CategoryController extends AbstractController
      * Get all categories
      */
     #[Route('', name: 'api_category_list', methods: ['GET'])]
-    public function getAll(): JsonResponse
+    public function getAll(Request $request): JsonResponse
     {
-        $categories = $this->categoryService->getAllCategories();
+        /** @var User $user */
+        $user = $this->getUser();
+
+        $type = $request->query->get('type');
+        $name = $request->query->get('name');
+
+        $categories = $this->categoryService->getAllCategories($user, $type, $name);
 
         return $this->json([
             'data' => array_map(
@@ -194,6 +200,7 @@ class CategoryController extends AbstractController
             'id' => $category->getId(),
             'name' => $category->getName(),
             'description' => $category->getDescription(),
+            'type' => $category->getType(),
             'createdAt' => $category->getCreatedAt()->format('Y-m-d H:i:s')
         ];
     }
