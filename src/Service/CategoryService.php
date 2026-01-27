@@ -59,12 +59,22 @@ class CategoryService
     }
 
     /**
-     * Get all categories
+     * Get all categories with optional filters
      */
-    public function getAllCategories(): array
+    public function getAllCategories($user = null, ?string $type = null, ?string $name = null): array
     {
+        $criteria = [];
+
+        if ($type !== null) {
+            $criteria['type'] = $type;
+        }
+
+        if ($name !== null) {
+            $criteria['name'] = $name;
+        }
+
         return $this->categoryRepository->findBy(
-            [],
+            $criteria,
             ['createdAt' => 'DESC']
         );
     }
