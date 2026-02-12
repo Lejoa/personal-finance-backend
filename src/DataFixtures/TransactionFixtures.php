@@ -124,7 +124,7 @@ class TransactionFixtures extends Fixture
     private function generateRandomDate(): \DateTime
     {
         $start = new \DateTime('-6 months');
-        $end = new \DateTime('today');
+        $end = new \DateTime('+3 months');
         $randomTimestamp = rand($start->getTimestamp(), $end->getTimestamp());
 
         return (new \DateTime())->setTimestamp($randomTimestamp);
