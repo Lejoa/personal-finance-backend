@@ -22,9 +22,16 @@ final class AuthController extends AbstractController
      * Redirige al usuario a la página de login de Google
      */
     #[Route('/auth/google', name: 'auth_google')]
-    public function googleConnect(ClientRegistry $clientRegistry): RedirectResponse
+    public function googleConnect(Request $request, ClientRegistry $clientRegistry): RedirectResponse
     {
-        // Redirige a Google OAuth con los scopes configurados
+        // Si el cliente es Android, guardarlo en la sesión antes de redirigir a Google.
+        // No se puede usar el campo "state" porque knpu lo usa internamente para CSRF.
+        // La sesión persiste entre la request /auth/google y el callback /auth/google/callback
+        // ya que ambas requests vienen del mismo browser (Chrome Custom Tab del celular).
+        if ($request->query->get('client') === 'android') {
+            $request->getSession()->set('oauth_client', 'android');
+        }
+
         return $clientRegistry
             ->getClient('google')
             ->redirect(
@@ -103,8 +110,21 @@ final class AuthController extends AbstractController
                 $entityManager
             );
 
-            // 8. Redirigir al frontend con ambos tokens en la URL
-            return new RedirectResponse("$frontendUrl/auth/callback?token=$accessToken&refreshToken=$refreshToken");
+            // 8. Redirigir al frontend con ambos tokens en la URL.
+            // Si el client es Android (custon URL scheme), redirigir a personalfinance://
+            // para que Android intercepte la URL y la enrute de cuelta a la app nativa.
+            // El parámetro ?client=android es enviado por AuthService.loginWithGoogleNative()
+            
+            // Recuperar el indicador de cliente Android desde la sesión.
+            // Chrome Custom Tab comparte la sesión con la request inicial /auth/google,
+            // por lo que el valor guardado en sesión está disponible en el callback.
+            $isAndroidClient = $request->getSession()->get('oauth_client') === 'android';
+            $request->getSession()->remove('oauth_client');
+            $callbackBase = $isAndroidClient
+                ? ($_ENV['FRONTEND_URL_ANDROID'] ?? 'personalfinance://auth/callback')
+                : "$frontendUrl/auth/callback";
+                
+            return new RedirectResponse("$callbackBase?token=$accessToken&refreshToken=$refreshToken");
 
         } catch (\Exception $e) {
             // En caso de error, redirigir al frontend con mensaje de error

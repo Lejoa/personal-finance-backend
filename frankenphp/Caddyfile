@@ -50,6 +50,14 @@
 	# Disable Topics tracking if not enabled explicitly: https://github.com/jkarlin/topics
 	header ?Permissions-Policy "browsing-topics=()"
 
+	# Si la request llega de un proxy (ngrok, load balancer) que envía X-Forwarded-Host,
+	# reescribir el header Host para que FrankenPHP/PHP lo vea como el host público real.
+	# Sin esto, PHP construye URLs con "localhost" aunque Symfony tenga trusted_proxies.
+	@has_forwarded_host {
+		header X-Forwarded-Host *
+	}
+	request_header @has_forwarded_host Host {http.request.header.X-Forwarded-Host}
+
 	@phpRoute {
 		not path /.well-known/mercure*
 		not file {path}
