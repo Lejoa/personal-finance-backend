@@ -15,9 +15,14 @@ services:
       # The two next lines can be removed after initial installation
       SYMFONY_VERSION: ${SYMFONY_VERSION:-}
       STABILITY: ${STABILITY:-stable}
+      # VarDumper Server — dump() envía aquí; el servidor escucha con server:dump
+      SYMFONY_VAR_DUMPER_SERVER: 127.0.0.1:9912
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+      - ./src:/app/src
+      - ./config:/app/config
+      - ./migrations:/app/migrations
     ports:
       # HTTP
       - target: 80
@@ -31,6 +36,10 @@ services:
       - target: 443
         published: ${HTTP3_PORT:-443}
         protocol: udp
+      # Symfony VarDumper Server
+      - target: 9912
+        published: 9912
+        protocol: tcp
 
 # Mercure is installed as a Caddy module, prevent the Flex recipe from installing another service
 ###> symfony/mercure-bundle ###
