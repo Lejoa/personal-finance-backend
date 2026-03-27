@@ -55,6 +55,17 @@ class CreateTransactionRequest
         choices: ['pending', 'done', 'rejected'],
         message: 'El estado debe ser "pending", "done" o "rejected".'
     )]
-    public ?string $synchronized = null; 
+    public ?string $synchronized = null;
+
+    /**
+     * Origen de la transacción. 'manual' por defecto; 'sms' cuando proviene
+     * de la lectura automática del buzón de SMS del dispositivo Android;
+     * 'chat' cuando es registrada por el asistente financiero conversacional.
+     */
+    #[Assert\Choice(
+        choices: ['manual', 'sms', 'chat'],
+        message: 'El origen debe ser "manual", "sms" o "chat".'
+    )]
+    public ?string $source = 'manual';
 
 }

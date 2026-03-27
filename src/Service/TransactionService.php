@@ -7,6 +7,7 @@ use App\DTO\UpdateTransactionRequest;
 use App\Entity\Category;
 use App\Entity\Transaction;
 use App\Entity\User;
+use App\Repository\CategoryRepository;
 use App\Repository\TransactionRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -14,7 +15,8 @@ class TransactionService
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly TransactionRepository $transactionRepository
+        private readonly TransactionRepository $transactionRepository,
+        private readonly CategoryRepository $categoryRepository
     ) {
     }
 
@@ -32,6 +34,10 @@ class TransactionService
 
         if ($dto->note) {
             $transaction->setNote($dto->note);
+        }
+
+        if($dto->source) {
+            $transaction->setSource($dto->source);
         }
 
         $this->entityManager->persist($transaction);
@@ -71,9 +77,12 @@ class TransactionService
         }
 
         if ($dto->categoryId !== null) {
-            $category = $this->entityManager->getRepository(Category::class)->find($dto->categoryId);
+            $category = $this->categoryRepository->find($dto->categoryId);
             if ($category) {
                 $transaction->setCategory($category);
+                if ($dto->synchronized === null && $transaction->getSynchronized() === 'pending') {
+                    $transaction->setSynchronized('done');
+                }
             }
         }
 
@@ -117,6 +126,18 @@ class TransactionService
             $limit,
             $synchronized
         );
+    }
+
+    /**
+     * Assigns a category to an existing transaction.
+     */
+    public function assignCategory(Transaction $transaction, Category $category): void
+    {
+        $transaction->setCategory($category);
+        if ($transaction->getSynchronized() === 'pending') {
+            $transaction->setSynchronized('done');
+        }
+        $this->entityManager->flush();
     }
 
     /**

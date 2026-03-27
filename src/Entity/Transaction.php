@@ -64,10 +64,19 @@ class Transaction
     #[ORM\Column(length: 10)]
     private string $synchronized = 'pending';
 
+    /**
+     * Origen de la transacción: 'manual' (registrada por el usuario), 'sms' (detectada automáticamente)
+     * o 'chat' (registrada por el asistente financiero conversacional).
+     * Nullable para compatibilidad con registros anteriores.
+     */
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $source = 'manual';
+
     public function __construct()
     {
         $this->createdAt = new \DateTime();
         $this->synchronized = 'pending';
+        $this->source = 'manual';
     }
 
     public function getId(): ?int
@@ -171,6 +180,17 @@ class Transaction
     public function setSynchronized(string $synchronized): static
     {
         $this->synchronized = $synchronized;
+        return $this;
+    }
+
+    public function getSource(): ?string
+    {
+        return $this->source;
+    }
+
+    public function setSource(?string $source): static
+    {
+        $this->source = $source;
         return $this;
     }
 }
