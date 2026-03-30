@@ -10,7 +10,7 @@ use Doctrine\Persistence\ObjectManager;
 
 class TransactionFixtures extends Fixture
 {
-    private const USER_ID = 4;
+    private const USER_EMAIL = 'alejandrogoa@gmail.com';
     private const TOTAL_TRANSACTIONS = 200;
 
     private array $keyValuesExpenses = [
@@ -37,10 +37,12 @@ class TransactionFixtures extends Fixture
 
     public function load(ObjectManager $manager): void
     {
-        $user = $manager->getRepository(User::class)->find(self::USER_ID);
+        $user = $manager->getRepository(User::class)->findOneBy(['email' => self::USER_EMAIL]);
 
         if (!$user) {
-            throw new \RuntimeException('Usuario con ID ' . self::USER_ID . ' no encontrado');
+            throw new \RuntimeException(
+                'Usuario "' . self::USER_EMAIL . '" no encontrado. Haz login con Google primero y luego ejecuta los fixtures.'
+            );
         }
 
         $categoriesMap = $this->buildCategoriesMap($manager);
@@ -123,8 +125,8 @@ class TransactionFixtures extends Fixture
 
     private function generateRandomDate(): \DateTime
     {
-        $start = new \DateTime('-6 months');
-        $end = new \DateTime('+3 months');
+        $start = new \DateTime('2026-01-01');
+        $end   = new \DateTime('2026-03-30');
         $randomTimestamp = rand($start->getTimestamp(), $end->getTimestamp());
 
         return (new \DateTime())->setTimestamp($randomTimestamp);

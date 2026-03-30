@@ -61,4 +61,61 @@ class TransactionRepository extends ServiceEntityRepository
 
         return $qb->getQuery()->getResult();
     }
+
+    /**
+     * Returns aggregated financial data for the last 30 days:
+     * total income, total expenses, and top 3 expense category names.
+     *
+     * @return array{total_income: float, total_expenses: float, top_expense_categories: string[]}
+     */
+    public function getUserFinancialSummary(User $user): array
+    {
+        $since = new \DateTime('-30 days');
+
+        $totals = $this->createQueryBuilder('t')
+            ->select('t.type, SUM(t.amount) as total')
+            ->where('t.user = :user')
+            ->andWhere('t.date >= :since')
+            ->groupBy('t.type')
+            ->setParameter('user', $user)
+            ->setParameter('since', $since)
+            ->getQuery()
+            ->getResult();
+
+        $totalIncome = 0.0;
+        $totalExpenses = 0.0;
+        foreach ($totals as $row) {
+            if ($row['type'] === 'ingreso') {
+                $totalIncome = (float) $row['total'];
+            } elseif ($row['type'] === 'gasto') {
+                $totalExpenses = (float) $row['total'];
+            }
+        }
+
+        $topCategories = $this->createQueryBuilder('t')
+            ->select('c.name, SUM(t.amount) as total')
+            ->join('t.category', 'c')
+            ->where('t.user = :user')
+            ->andWhere('t.type = :type')
+            ->andWhere('t.date >= :since')
+            ->groupBy('c.name')
+            ->orderBy('total', 'DESC')
+            ->setMaxResults(3)
+            ->setParameter('user', $user)
+            ->setParameter('type', 'gasto')
+            ->setParameter('since', $since)
+            ->getQuery()
+            ->getResult();
+
+        $topExpenseCategories = array_map(
+            fn($row) => mb_strtolower($row['name']),
+            $topCategories
+        );
+
+        return [
+            'total_income' => $totalIncome,
+            'total_expenses' => $totalExpenses,
+            'top_expense_categories' => $topExpenseCategories,
+        ];
+    }
 }

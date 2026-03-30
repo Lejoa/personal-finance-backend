@@ -32,4 +32,28 @@ class CreateTipRequest
         maxMessage: 'La descripción no puede tener más de {{ limit }} caracteres.'
     )]
     public ?string $description = null;
+
+    #[Assert\Length(
+        max: 500,
+        maxMessage: 'La descripción corta no puede tener más de {{ limit }} caracteres.'
+    )]
+    public ?string $shortDescription = null;
+
+    #[Assert\Length(
+        max: 255,
+        maxMessage: 'El título del autor no puede tener más de {{ limit }} caracteres.'
+    )]
+    public ?string $authorTitle = null;
+
+    #[Assert\Length(
+        max: 500,
+        maxMessage: 'La URL de imagen no puede tener más de {{ limit }} caracteres.'
+    )]
+    public ?string $imageSrc = null;
+
+    #[Assert\Length(
+        max: 500,
+        maxMessage: 'Los tags no pueden tener más de {{ limit }} caracteres.'
+    )]
+    public ?string $tags = null;
 }

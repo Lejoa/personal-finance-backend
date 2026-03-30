@@ -81,6 +81,23 @@ class TipController extends AbstractController
     }
 
     /**
+     * Get recommended tips for the authenticated user
+     */
+    #[Route('/recommended', name: 'api_tip_recommended', methods: ['GET'])]
+    public function recommended(): JsonResponse
+    {
+        $tips = $this->tipService->getRecommendedTips($this->getUser());
+
+        return $this->json([
+            'data' => array_map(
+                fn($tip) => $this->serializeTip($tip),
+                $tips
+            ),
+            'total' => count($tips)
+        ]);
+    }
+
+    /**
      * Get a specific tip by ID
      */
     #[Route('/{id}', name: 'api_tip_show', methods: ['GET'])]
@@ -191,11 +208,15 @@ class TipController extends AbstractController
     private function serializeTip($tip): array
     {
         return [
-            'id' => $tip->getId(),
-            'title' => $tip->getTitle(),
-            'author' => $tip->getAuthor(),
-            'description' => $tip->getDescription(),
-            'createdAt' => $tip->getCreatedAt()->format('Y-m-d H:i:s')
+            'id'               => $tip->getId(),
+            'title'            => $tip->getTitle(),
+            'author'           => $tip->getAuthor(),
+            'authorTitle'      => $tip->getAuthorTitle(),
+            'shortDescription' => $tip->getShortDescription(),
+            'description'      => $tip->getDescription(),
+            'imageSrc'         => $tip->getImageSrc(),
+            'tags'             => $tip->getTags(),
+            'createdAt'        => $tip->getCreatedAt()->format('Y-m-d H:i:s'),
         ];
     }
 }
