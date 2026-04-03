@@ -23,4 +23,13 @@ class CreateCategoryRequest
         maxMessage: 'La descripción no puede tener más de {{ limit }} caracteres.'
     )]
     public ?string $description = null;
+
+    #[Assert\NotBlank(
+        message: 'El tipo es obligatorio.'
+    )]
+    #[Assert\Choice(
+        choices: ['gasto', 'ingreso'],
+        message: 'El tipo debe ser "gasto" o "ingreso".'
+    )]
+    public ?string $type = null;
 }

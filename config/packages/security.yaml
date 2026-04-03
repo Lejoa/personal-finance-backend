@@ -12,7 +12,15 @@ security:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
-        # Firewall principal para la API
+        # Firewall con sesión para el flujo OAuth.
+        # knpu/oauth2-client-bundle guarda el nonce "state" en la sesión PHP
+        # entre /auth/google y /auth/google/callback. Si este firewall fuera
+        # stateless la sesión no persiste y Google devuelve "Invalid state".
+        oauth:
+            pattern: ^/auth
+            stateless: false
+            security: false
+        # Firewall de la API: stateless porque usa JWT, no sesiones
         main:
             stateless: true
             provider: app_user_provider

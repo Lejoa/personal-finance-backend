@@ -24,6 +24,7 @@ class CategoryService
         $category = new Category();
         $category->setName($dto->name);
         $category->setDescription($dto->description);
+        $category->setType($dto->type);
 
         $this->entityManager->persist($category);
         $this->entityManager->flush();
@@ -50,10 +51,22 @@ class CategoryService
     }
 
     /**
-     * Delete a category
+     * Delete a category.
+     * Throws \InvalidArgumentException if transactions reference this category.
      */
     public function deleteCategory(Category $category): void
     {
+        $transactionCount = $this->entityManager
+            ->getRepository(\App\Entity\Transaction::class)
+            ->count(['category' => $category]);
+
+        if ($transactionCount > 0) {
+            throw new \InvalidArgumentException(
+                "No se puede eliminar la categoría \"{$category->getName()}\" porque tiene {$transactionCount} " .
+                ($transactionCount === 1 ? 'transacción asociada.' : 'transacciones asociadas.')
+            );
+        }
+
         $this->entityManager->remove($category);
         $this->entityManager->flush();
     }

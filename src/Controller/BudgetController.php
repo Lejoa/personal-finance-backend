@@ -4,7 +4,9 @@ namespace App\Controller;
 
 use App\DTO\CreateBudgetRequest;
 use App\DTO\UpdateBudgetRequest;
+use App\Entity\BudgetCategory;
 use App\Entity\User;
+use App\Repository\BudgetCategoryRepository;
 use App\Service\BudgetService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -21,6 +23,7 @@ class BudgetController extends AbstractController
 {
     public function __construct(
         private readonly BudgetService $budgetService,
+        private readonly BudgetCategoryRepository $budgetCategoryRepository,
         private readonly SerializerInterface $serializer,
         private readonly ValidatorInterface $validator
     ) {
@@ -142,6 +145,84 @@ class BudgetController extends AbstractController
 
         return $this->json(
             ['message' => 'Presupuesto eliminado exitosamente'],
+            Response::HTTP_OK
+        );
+    }
+
+    /**
+     * Update the amount of a single budget category
+     */
+    #[Route('/{budgetId}/categories/{budgetCategoryId}', name: 'api_budgets_category_update', methods: ['PATCH'])]
+    public function updateCategory(int $budgetId, int $budgetCategoryId, Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        $budget = $this->budgetService->getUserBudgetById($budgetId, $user);
+        if (!$budget) {
+            return $this->json(
+                ['error' => 'Presupuesto no encontrado'],
+                Response::HTTP_NOT_FOUND
+            );
+        }
+
+        $budgetCategory = $this->budgetCategoryRepository->find($budgetCategoryId);
+        if (!$budgetCategory || $budgetCategory->getBudget()->getId() !== $budgetId) {
+            return $this->json(
+                ['error' => 'Categoría de presupuesto no encontrada'],
+                Response::HTTP_NOT_FOUND
+            );
+        }
+
+        $body = json_decode($request->getContent(), true);
+        $amount = $body['amount'] ?? null;
+
+        if ($amount === null || !is_numeric($amount) || (float) $amount <= 0) {
+            return $this->json(
+                ['error' => 'El campo "amount" debe ser un número mayor a 0'],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
+        $updated = $this->budgetService->updateBudgetCategoryAmount($budgetCategory, (float) $amount);
+
+        return $this->json([
+            'id'          => $updated->getId(),
+            'categoryId'  => $updated->getCategory()->getId(),
+            'categoryName'=> $updated->getCategory()->getName(),
+            'amount'      => $updated->getAmount()
+        ]);
+    }
+
+    /**
+     * Delete a single category from a budget
+     */
+    #[Route('/{budgetId}/categories/{budgetCategoryId}', name: 'api_budgets_category_delete', methods: ['DELETE'])]
+    public function deleteCategory(int $budgetId, int $budgetCategoryId): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        $budget = $this->budgetService->getUserBudgetById($budgetId, $user);
+        if (!$budget) {
+            return $this->json(
+                ['error' => 'Presupuesto no encontrado'],
+                Response::HTTP_NOT_FOUND
+            );
+        }
+
+        $budgetCategory = $this->budgetCategoryRepository->find($budgetCategoryId);
+        if (!$budgetCategory || $budgetCategory->getBudget()->getId() !== $budgetId) {
+            return $this->json(
+                ['error' => 'Categoría de presupuesto no encontrada'],
+                Response::HTTP_NOT_FOUND
+            );
+        }
+
+        $this->budgetService->removeBudgetCategory($budgetCategory);
+
+        return $this->json(
+            ['message' => 'Categoría eliminada del presupuesto exitosamente'],
             Response::HTTP_OK
         );
     }

@@ -171,6 +171,11 @@ class CategoryController extends AbstractController
             return $this->json([
                 'message' => 'Categoría eliminada exitosamente'
             ]);
+        } catch (\InvalidArgumentException $e) {
+            return $this->json(
+                ['error' => $e->getMessage()],
+                Response::HTTP_CONFLICT
+            );
         } catch (\Exception $e) {
             return $this->json(
                 ['error' => 'Error al eliminar categoría', 'message' => $e->getMessage()],

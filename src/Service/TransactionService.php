@@ -80,9 +80,6 @@ class TransactionService
             $category = $this->categoryRepository->find($dto->categoryId);
             if ($category) {
                 $transaction->setCategory($category);
-                if ($dto->synchronized === null && $transaction->getSynchronized() === 'pending') {
-                    $transaction->setSynchronized('done');
-                }
             }
         }
 
@@ -134,9 +131,6 @@ class TransactionService
     public function assignCategory(Transaction $transaction, Category $category): void
     {
         $transaction->setCategory($category);
-        if ($transaction->getSynchronized() === 'pending') {
-            $transaction->setSynchronized('done');
-        }
         $this->entityManager->flush();
     }
 

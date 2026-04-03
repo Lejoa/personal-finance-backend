@@ -117,6 +117,36 @@ class BudgetService
     }
 
     /**
+     * Update the amount of a single BudgetCategory.
+     */
+    public function updateBudgetCategoryAmount(BudgetCategory $budgetCategory, float $amount): BudgetCategory
+    {
+        $budgetCategory->setAmount($amount);
+        $this->entityManager->flush();
+
+        return $budgetCategory;
+    }
+
+    /**
+     * Remove a single BudgetCategory from its budget.
+     * If the budget has no remaining categories, delete the budget as well.
+     */
+    public function removeBudgetCategory(BudgetCategory $budgetCategory): void
+    {
+        $budget = $budgetCategory->getBudget();
+
+        $budget->removeBudgetCategory($budgetCategory);
+        $this->entityManager->remove($budgetCategory);
+
+        // If no categories remain, remove the budget itself
+        if ($budget->getBudgetCategories()->isEmpty()) {
+            $this->entityManager->remove($budget);
+        }
+
+        $this->entityManager->flush();
+    }
+
+    /**
      * Get all budgets for a user
      */
     public function getUserBudgets(User $user): array

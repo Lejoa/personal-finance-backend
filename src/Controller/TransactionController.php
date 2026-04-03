@@ -231,6 +231,7 @@ class TransactionController extends AbstractController
             'categoryId' => $category?->getId(),
             'categoryName' => $category?->getName(),
             'synchronized' => $transaction->getSynchronized(),
+            'source' => $transaction->getSource(),
             'createdAt' => $transaction->getCreatedAt()->format('Y-m-d H:i:s')
         ];
     }
