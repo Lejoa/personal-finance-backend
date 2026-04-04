@@ -171,6 +171,29 @@ class TransactionController extends AbstractController
     }
 
     /**
+     * Get formative feedback message for a confirmed transaction
+     */
+    #[Route('/{id}/feedback', name: 'api_transaction_feedback', methods: ['POST'])]
+    public function feedback(int $id): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        $transaction = $this->transactionService->getTransactionById($id, $user);
+
+        if (!$transaction) {
+            return $this->json(
+                ['error' => 'Transacción no encontrada'],
+                Response::HTTP_NOT_FOUND
+            );
+        }
+
+        $feedback = $this->transactionService->buildFormativeFeedback($transaction, $user);
+
+        return $this->json(['feedback' => $feedback]);
+    }
+
+    /**
      * Delete a transaction
      */
     #[Route('/{id}', name: 'api_transaction_delete', methods: ['DELETE'])]

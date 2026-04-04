@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Constants\FeedbackMessages;
 use App\DTO\CreateTransactionRequest;
 use App\DTO\UpdateTransactionRequest;
 use App\Entity\Category;
@@ -132,6 +133,72 @@ class TransactionService
     {
         $transaction->setCategory($category);
         $this->entityManager->flush();
+    }
+
+    /**
+     * Generates a formative, motivational feedback message after a transaction is confirmed.
+     * Tone is always positive and data-driven — never alarmist or judgmental.
+     */
+    public function buildFormativeFeedback(Transaction $transaction, User $user): ?string
+    {
+        $category = $transaction->getCategory();
+        $amount = $transaction->getAmount();
+
+        if ($transaction->getType() === 'ingreso') {
+            $totalIncome = $this->transactionRepository->getCurrentMonthIncome($user);
+            return sprintf(
+                FeedbackMessages::INCOME_REGISTERED,
+                $this->formatCOP($amount),
+                $this->formatCOP($totalIncome)
+            );
+        }
+
+        if (!$category) {
+            return FeedbackMessages::EXPENSE_NO_CATEGORY;
+        }
+
+        $categoryId = $category->getId();
+        $categoryName = $category->getName();
+
+        $history = $this->transactionRepository->getMonthlyCategorySpending($user, $categoryId, 3);
+        $currentMonthTotal = $this->transactionRepository->getCurrentMonthCategorySpending($user, $categoryId);
+
+        if (empty($history)) {
+            return sprintf(FeedbackMessages::EXPENSE_FIRST_TIME, $categoryName);
+        }
+
+        $average = array_sum(array_column($history, 'total')) / count($history);
+        $delta = $average > 0 ? (($currentMonthTotal - $average) / $average) : 0;
+
+        if ($delta < -0.1) {
+            return sprintf(
+                FeedbackMessages::EXPENSE_BELOW_AVERAGE,
+                $this->formatCOP($currentMonthTotal),
+                $categoryName,
+                $this->formatCOP($average)
+            );
+        }
+
+        if ($delta <= 0.2) {
+            return sprintf(
+                FeedbackMessages::EXPENSE_ON_TRACK,
+                $categoryName,
+                $this->formatCOP($currentMonthTotal),
+                $this->formatCOP($average)
+            );
+        }
+
+        return sprintf(
+            FeedbackMessages::EXPENSE_ABOVE_AVERAGE,
+            $this->formatCOP($currentMonthTotal),
+            $categoryName,
+            $this->formatCOP($average)
+        );
+    }
+
+    private function formatCOP(float $amount): string
+    {
+        return '$' . number_format($amount, 0, ',', '.');
     }
 
     /**

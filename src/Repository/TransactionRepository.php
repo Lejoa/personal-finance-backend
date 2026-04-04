@@ -63,6 +63,105 @@ class TransactionRepository extends ServiceEntityRepository
     }
 
     /**
+     * Returns monthly spending totals for a specific category over the last N months (excluding current month).
+     * Used to calculate historical averages for formative feedback.
+     *
+     * @return array<int, array{month: string, total: float}>
+     */
+    public function getMonthlyCategorySpending(User $user, int $categoryId, int $monthsBack = 3): array
+    {
+        $startDate = new \DateTime("first day of -{$monthsBack} months");
+        $startDate->setTime(0, 0, 0);
+
+        $endDate = new \DateTime('first day of this month');
+        $endDate->setTime(0, 0, 0);
+
+        $conn = $this->getEntityManager()->getConnection();
+
+        $sql = "
+            SELECT TO_CHAR(t.date, 'YYYY-MM') AS month, SUM(t.amount) AS total
+            FROM transactions t
+            INNER JOIN categories c ON t.category_id = c.id
+            WHERE t.user_id = :userId
+              AND c.id = :categoryId
+              AND t.type = 'gasto'
+              AND t.date >= :startDate
+              AND t.date < :endDate
+            GROUP BY TO_CHAR(t.date, 'YYYY-MM')
+            ORDER BY month ASC
+        ";
+
+        $rows = $conn->fetchAllAssociative($sql, [
+            'userId'     => $user->getId(),
+            'categoryId' => $categoryId,
+            'startDate'  => $startDate->format('Y-m-d'),
+            'endDate'    => $endDate->format('Y-m-d'),
+        ]);
+
+        return array_map(
+            fn($row) => ['month' => $row['month'], 'total' => (float) $row['total']],
+            $rows
+        );
+    }
+
+    /**
+     * Returns total spending for a specific category in the current month.
+     */
+    public function getCurrentMonthCategorySpending(User $user, int $categoryId): float
+    {
+        $startDate = new \DateTime('first day of this month');
+        $startDate->setTime(0, 0, 0);
+
+        $endDate = new \DateTime('last day of this month');
+        $endDate->setTime(23, 59, 59);
+
+        $result = $this->createQueryBuilder('t')
+            ->select('SUM(t.amount) as total')
+            ->join('t.category', 'c')
+            ->where('t.user = :user')
+            ->andWhere('c.id = :categoryId')
+            ->andWhere('t.type = :type')
+            ->andWhere('t.date >= :startDate')
+            ->andWhere('t.date <= :endDate')
+            ->setParameter('user', $user)
+            ->setParameter('categoryId', $categoryId)
+            ->setParameter('type', 'gasto')
+            ->setParameter('startDate', $startDate)
+            ->setParameter('endDate', $endDate)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return (float) ($result ?? 0.0);
+    }
+
+    /**
+     * Returns total income for the current month.
+     */
+    public function getCurrentMonthIncome(User $user): float
+    {
+        $startDate = new \DateTime('first day of this month');
+        $startDate->setTime(0, 0, 0);
+
+        $endDate = new \DateTime('last day of this month');
+        $endDate->setTime(23, 59, 59);
+
+        $result = $this->createQueryBuilder('t')
+            ->select('SUM(t.amount) as total')
+            ->where('t.user = :user')
+            ->andWhere('t.type = :type')
+            ->andWhere('t.date >= :startDate')
+            ->andWhere('t.date <= :endDate')
+            ->setParameter('user', $user)
+            ->setParameter('type', 'ingreso')
+            ->setParameter('startDate', $startDate)
+            ->setParameter('endDate', $endDate)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return (float) ($result ?? 0.0);
+    }
+
+    /**
      * Returns aggregated financial data for the last 30 days:
      * total income, total expenses, and top 3 expense category names.
      *
