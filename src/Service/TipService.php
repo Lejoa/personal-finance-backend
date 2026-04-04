@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Constants\TipReasonMessages;
 use App\DTO\CreateTipRequest;
 use App\DTO\UpdateTipRequest;
 use App\Entity\Tip;
@@ -112,22 +113,25 @@ class TipService
      * - Always include tags matching the user's top expense categories
      * Falls back to the 3 most recent tips when no tag match is found.
      *
-     * @return Tip[]
+     * @return array<int, array{tip: Tip, reason: string}>
      */
     public function getRecommendedTips(User $user): array
     {
         $summary = $this->transactionRepository->getUserFinancialSummary($user);
 
-        $income   = $summary['total_income'];
-        $expenses = $summary['total_expenses'];
+        $income        = $summary['total_income'];
+        $expenses      = $summary['total_expenses'];
         $topCategories = $summary['top_expense_categories'];
 
-        $tags = $topCategories;
+        $tags           = $topCategories;
+        $primaryReason  = TipReasonMessages::RECENT_FALLBACK;
 
         if ($expenses > $income) {
-            $tags = array_merge(['ahorro', 'gastos'], $tags);
+            $tags          = array_merge(['ahorro', 'gastos'], $tags);
+            $primaryReason = TipReasonMessages::HIGH_EXPENSES;
         } elseif ($income > 0 && ($expenses / $income) < 0.5) {
-            $tags[] = 'inversión';
+            $tags[]        = 'inversión';
+            $primaryReason = TipReasonMessages::HIGH_SAVINGS;
         }
 
         $tags = array_unique($tags);
@@ -135,10 +139,36 @@ class TipService
         if (!empty($tags)) {
             $tips = $this->tipRepository->findByTags($tags, 3);
             if (!empty($tips)) {
-                return $tips;
+                return $this->attachReasons($tips, $tags, $topCategories, $primaryReason);
             }
         }
 
-        return $this->tipRepository->findRecent(3);
+        return array_map(
+            fn(Tip $tip) => ['tip' => $tip, 'reason' => TipReasonMessages::RECENT_FALLBACK],
+            $this->tipRepository->findRecent(3)
+        );
+    }
+
+    /**
+     * Attaches a contextual reason string to each tip based on which tag matched.
+     *
+     * @param Tip[]    $tips
+     * @param string[] $tags          Full list of tags used for matching
+     * @param string[] $topCategories Top expense category names (lowercase)
+     * @return array<int, array{tip: Tip, reason: string}>
+     */
+    private function attachReasons(array $tips, array $tags, array $topCategories, string $primaryReason): array
+    {
+        return array_map(function (Tip $tip) use ($tags, $topCategories, $primaryReason) {
+            $tipTags = array_map('trim', explode(',', $tip->getTags() ?? ''));
+
+            foreach ($topCategories as $category) {
+                if (in_array($category, $tipTags, true)) {
+                    return ['tip' => $tip, 'reason' => sprintf(TipReasonMessages::TOP_CATEGORY, ucfirst($category))];
+                }
+            }
+
+            return ['tip' => $tip, 'reason' => $primaryReason];
+        }, $tips);
     }
 }

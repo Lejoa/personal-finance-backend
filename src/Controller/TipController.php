@@ -81,19 +81,22 @@ class TipController extends AbstractController
     }
 
     /**
-     * Get recommended tips for the authenticated user
+     * Get recommended tips for the authenticated user, each with a contextual reason
      */
     #[Route('/recommended', name: 'api_tip_recommended', methods: ['GET'])]
     public function recommended(): JsonResponse
     {
-        $tips = $this->tipService->getRecommendedTips($this->getUser());
+        $results = $this->tipService->getRecommendedTips($this->getUser());
 
         return $this->json([
             'data' => array_map(
-                fn($tip) => $this->serializeTip($tip),
-                $tips
+                fn($result) => array_merge(
+                    $this->serializeTip($result['tip']),
+                    ['reason' => $result['reason']]
+                ),
+                $results
             ),
-            'total' => count($tips)
+            'total' => count($results)
         ]);
     }
 
