@@ -4,13 +4,15 @@ namespace App\Service;
 
 use App\Entity\User;
 use App\Repository\BudgetRepository;
+use App\Repository\TipRepository;
 use App\Repository\TransactionRepository;
 
 class FinancialContextService
 {
     public function __construct(
         private BudgetRepository $budgetRepository,
-        private TransactionRepository $transactionRepository
+        private TransactionRepository $transactionRepository,
+        private TipRepository $tipRepository
     ) {}
 
     /**
@@ -50,6 +52,14 @@ class FinancialContextService
             $endOfMonth
         );
 
+        $previousTotals       = $this->transactionRepository->getPreviousMonthTotals($user);
+        $previousSavingsRate  = $this->calculateSavingRate(
+            $previousTotals['income'],
+            $previousTotals['expenses']
+        );
+
+        $topTip = $this->tipRepository->findOneBy([], ['id' => 'DESC']);
+
         return [
             'userContext' => [
                 'currency' => 'COP',
@@ -61,9 +71,11 @@ class FinancialContextService
                 'total_income' => $totalIncome,
                 'total_expenses' => $totalExpenses,
                 'savings_rate' => $savingsRate,
+                'previous_savings_rate' => $previousSavingsRate,
             ],
             'categories' => $categories,
             'budgets' => $formattedBudgets,
+            'top_tip' => $topTip ? $topTip->getTitle() . ': ' . $topTip->getShortDescription() : null,
         ];
     }
 

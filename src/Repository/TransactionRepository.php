@@ -162,6 +162,43 @@ class TransactionRepository extends ServiceEntityRepository
     }
 
     /**
+     * Returns income and expenses for the previous calendar month.
+     *
+     * @return array{income: float, expenses: float}
+     */
+    public function getPreviousMonthTotals(User $user): array
+    {
+        $start = new \DateTime('first day of last month');
+        $start->setTime(0, 0, 0);
+        $end = new \DateTime('last day of last month');
+        $end->setTime(23, 59, 59);
+
+        $rows = $this->createQueryBuilder('t')
+            ->select('t.type, SUM(t.amount) as total')
+            ->where('t.user = :user')
+            ->andWhere('t.date >= :start')
+            ->andWhere('t.date <= :end')
+            ->groupBy('t.type')
+            ->setParameter('user', $user)
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->getQuery()
+            ->getResult();
+
+        $income   = 0.0;
+        $expenses = 0.0;
+        foreach ($rows as $row) {
+            if ($row['type'] === 'ingreso') {
+                $income = (float) $row['total'];
+            } elseif ($row['type'] === 'gasto') {
+                $expenses = (float) $row['total'];
+            }
+        }
+
+        return ['income' => $income, 'expenses' => $expenses];
+    }
+
+    /**
      * Returns aggregated financial data for the last 30 days:
      * total income, total expenses, and top 3 expense category names.
      *
