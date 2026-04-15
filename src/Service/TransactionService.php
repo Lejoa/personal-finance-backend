@@ -17,7 +17,8 @@ class TransactionService
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly TransactionRepository $transactionRepository,
-        private readonly CategoryRepository $categoryRepository
+        private readonly CategoryRepository $categoryRepository,
+        private readonly FinancialDigestService $digestService
     ) {
     }
 
@@ -26,6 +27,13 @@ class TransactionService
      */
     public function createTransaction(CreateTransactionRequest $dto, User $user): Transaction
     {
+        if ($dto->source === 'sms' && !empty($dto->note)) {
+            $existing = $this->transactionRepository->findExistingByNote($user, $dto->note);
+            if ($existing !== null) {
+                return $existing;
+            }
+        }
+
         $transaction = new Transaction();
         $transaction->setUser($user);
         $transaction->setName($dto->name);
@@ -43,6 +51,8 @@ class TransactionService
 
         $this->entityManager->persist($transaction);
         $this->entityManager->flush();
+
+        $this->digestService->invalidate($user);
 
         return $transaction;
     }
@@ -98,8 +108,10 @@ class TransactionService
      */
     public function deleteTransaction(Transaction $transaction): void
     {
+        $user = $transaction->getUser();
         $this->entityManager->remove($transaction);
         $this->entityManager->flush();
+        $this->digestService->invalidate($user);
     }
 
     /**

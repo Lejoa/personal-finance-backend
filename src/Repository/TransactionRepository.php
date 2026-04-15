@@ -63,6 +63,22 @@ class TransactionRepository extends ServiceEntityRepository
     }
 
     /**
+     * Busca una transacción existente por nota exacta para un usuario.
+     * Usado para deduplicación de SMS: el cuerpo del SMS es único por evento bancario.
+     */
+    public function findExistingByNote(User $user, string $note): ?Transaction
+    {
+        return $this->createQueryBuilder('t')
+            ->where('t.user = :user')
+            ->andWhere('t.note = :note')
+            ->setParameter('user', $user)
+            ->setParameter('note', $note)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
      * Returns monthly spending totals for a specific category over the last N months (excluding current month).
      * Used to calculate historical averages for formative feedback.
      *
@@ -196,6 +212,65 @@ class TransactionRepository extends ServiceEntityRepository
         }
 
         return ['income' => $income, 'expenses' => $expenses];
+    }
+
+    /**
+     * Returns distinct expense category ids and names for a user (current month).
+     * Used to iterate and fetch 3-month history per category.
+     *
+     * @return array<int, array{id: int, name: string}>
+     */
+    public function getExpenseCategoryIds(User $user): array
+    {
+        $startOfMonth = new \DateTime('first day of this month');
+        $startOfMonth->setTime(0, 0, 0);
+        $endOfMonth = new \DateTime('last day of this month');
+        $endOfMonth->setTime(23, 59, 59);
+
+        $rows = $this->createQueryBuilder('t')
+            ->select('DISTINCT c.id, c.name')
+            ->join('t.category', 'c')
+            ->where('t.user = :user')
+            ->andWhere('t.type = :type')
+            ->andWhere('t.date >= :start')
+            ->andWhere('t.date <= :end')
+            ->setParameter('user', $user)
+            ->setParameter('type', 'gasto')
+            ->setParameter('start', $startOfMonth)
+            ->setParameter('end', $endOfMonth)
+            ->getQuery()
+            ->getResult();
+
+        return array_map(fn($row) => ['id' => $row['id'], 'name' => $row['name']], $rows);
+    }
+
+    /**
+     * Counts how many of the last N months had at least $minTransactions transactions.
+     * Used to compute the user's financial consistency score.
+     */
+    public function countConsistentMonths(User $user, int $monthsBack = 3, int $minTransactions = 5): int
+    {
+        $conn = $this->getEntityManager()->getConnection();
+
+        $sql = "
+            SELECT TO_CHAR(t.date, 'YYYY-MM') AS month, COUNT(*) AS tx_count
+            FROM transactions t
+            WHERE t.user_id = :userId
+              AND t.date >= :startDate
+              AND t.date < :endDate
+            GROUP BY TO_CHAR(t.date, 'YYYY-MM')
+        ";
+
+        $startDate = new \DateTime("first day of -{$monthsBack} months");
+        $endDate   = new \DateTime('first day of this month');
+
+        $rows = $conn->fetchAllAssociative($sql, [
+            'userId'    => $user->getId(),
+            'startDate' => $startDate->format('Y-m-d'),
+            'endDate'   => $endDate->format('Y-m-d'),
+        ]);
+
+        return count(array_filter($rows, fn($r) => (int) $r['tx_count'] >= $minTransactions));
     }
 
     /**

@@ -48,13 +48,18 @@ class ChatService
         $this->entityManager->flush();
 
         // Build financial context and call LLM
-        $context = $this->contextService->buildContext($user);
+        $context     = $this->contextService->buildContext($user);
+        $contextType = $this->classifyContextNeeds($dto->message);
+        $additionalContext = $this->contextService->buildAdditionalContext($user, $contextType);
+
         $llmRequest = new LlmChatRequestDTO(
             message: $dto->message,
             userContext: $context['userContext'],
             financialSummary: $context['summary'],
             categories: $context['categories'],
-            budgets: $context['budgets']
+            budgets: $context['budgets'],
+            additionalContext: $additionalContext,
+            contextType: $contextType
         );
 
         $llmResponse = $this->callLlmService($llmRequest);
@@ -271,6 +276,42 @@ class ChatService
         return mb_strlen($message) > 50
             ? mb_substr($message, 0, 50) . '...'
             : $message;
+    }
+
+    /**
+     * Calls the LLM Service classify-context endpoint.
+     * Validates Safety (ToxicLanguage + DetectPII) and classifies the context type.
+     * Throws \RuntimeException with the guardrails detail on HTTP 422.
+     * Falls back to "none" on network or classification errors so the main flow is never blocked.
+     */
+    private function classifyContextNeeds(string $message): string
+    {
+        try {
+            $response = $this->httpClient->request('POST', $this->llmServiceUrl . '/llm/classify-context', [
+                'json'         => ['message' => $message],
+                'timeout'      => 15,
+                'max_duration' => 15,
+            ]);
+
+            // Propagate Safety rejections (422) — do not swallow them
+            if ($response->getStatusCode() === 422) {
+                $detail = $response->toArray(false);
+                throw new \RuntimeException(
+                    $detail['detail']['message'] ?? 'Message rejected by safety guardrails.',
+                    422
+                );
+            }
+
+            $data = $response->toArray();
+            return $data['context_type'] ?? 'none';
+        } catch (\RuntimeException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            $this->logger->warning('Context classification failed, defaulting to none', [
+                'error' => $e->getMessage(),
+            ]);
+            return 'none';
+        }
     }
 
     /**

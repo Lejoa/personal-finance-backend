@@ -61,6 +61,18 @@ class ChatController extends AbstractController
                 'metadata' => $response->metadata,
             ]);
 
+        } catch (\RuntimeException $e) {
+            // 422 from Safety guardrails in /llm/classify-context
+            if ($e->getCode() === 422) {
+                return $this->json(
+                    ['error' => 'message_rejected', 'message' => $e->getMessage()],
+                    Response::HTTP_UNPROCESSABLE_ENTITY
+                );
+            }
+            return $this->json(
+                ['error' => 'Error al procesar mensaje', 'message' => $e->getMessage()],
+                Response::HTTP_INTERNAL_SERVER_ERROR
+            );
         } catch (\Exception $e) {
             return $this->json(
                 ['error' => 'Error al procesar mensaje', 'message' => $e->getMessage()],

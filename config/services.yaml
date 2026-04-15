@@ -27,3 +27,7 @@ services:
     App\Service\ChatService:
         arguments:
             $llmServiceUrl: '%llm_service_url%'
+
+    App\Service\AnalysisService:
+        arguments:
+            $llmServiceUrl: '%llm_service_url%'
