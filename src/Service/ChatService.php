@@ -6,8 +6,10 @@ use App\DTO\ChatRequestDTO;
 use App\DTO\ChatResponseDTO;
 use App\DTO\CreateTransactionRequest;
 use App\DTO\LlmChatRequestDTO;
+use App\Entity\Category;
 use App\Entity\ChatConversation;
 use App\Entity\ChatMessage;
+use App\Entity\Transaction;
 use App\Entity\User;
 use App\Repository\CategoryRepository;
 use App\Repository\ChatConversationRepository;
@@ -28,16 +30,17 @@ class ChatService
         private readonly ValidatorInterface $validator,
         private readonly LoggerInterface $logger,
         private readonly string $llmServiceUrl
-    ) {}
+    ) {
+    }
 
     /**
-     * Processes a user message and returns the LLM response.
+     * Processes a user message: persists it, calls the LLM, processes any detected
+     * transaction action, persists the assistant reply, and returns a response DTO.
      */
     public function processMessage(ChatRequestDTO $dto, User $user): ChatResponseDTO
     {
         $conversation = $this->getOrCreateConversation($dto, $user);
 
-        // Persist user message
         $userMessage = new ChatMessage();
         $userMessage->setContent($dto->message);
         $userMessage->setRole('user');
@@ -47,9 +50,8 @@ class ChatService
         $this->entityManager->persist($userMessage);
         $this->entityManager->flush();
 
-        // Build financial context and call LLM
-        $context     = $this->contextService->buildContext($user);
-        $contextType = $this->classifyContextNeeds($dto->message);
+        $context           = $this->contextService->buildContext($user);
+        $contextType       = $this->classifyContextNeeds($dto->message);
         $additionalContext = $this->contextService->buildAdditionalContext($user, $contextType);
 
         $llmRequest = new LlmChatRequestDTO(
@@ -62,20 +64,15 @@ class ChatService
             contextType: $contextType
         );
 
-        $llmResponse = $this->callLlmService($llmRequest);
-        $this->logger->info('LLM response keys: ' . implode(', ', array_keys($llmResponse)));
-        $this->logger->info('LLM transaction_action raw: ' . json_encode($llmResponse['transaction_action'] ?? 'KEY_NOT_FOUND'));
-        // Enrich metadata with transaction result if the LLM detected one
-        $metadata = $llmResponse['metadata'] ?? [];
+        $llmResponse       = $this->callLlmService($llmRequest);
+        $metadata          = $llmResponse['metadata'] ?? [];
         $transactionAction = $llmResponse['transaction_action'] ?? null;
 
         if ($transactionAction !== null) {
             $transactionMetadata = $this->processTransactionAction($transactionAction, $user);
-            dump(['transaction_metadata' => $transactionMetadata]);
-            $metadata = array_merge($metadata, $transactionMetadata);
+            $metadata            = array_merge($metadata, $transactionMetadata);
         }
 
-        // Persist assistant message with enriched metadata
         $assistantMessage = new ChatMessage();
         $assistantMessage->setContent($llmResponse['message']);
         $assistantMessage->setRole('assistant');
@@ -98,24 +95,24 @@ class ChatService
 
     /**
      * Orchestrates the transaction creation flow from an LLM-detected action.
-     * Returns either transaction_created or pending_categorization metadata.
+     * Returns pending_categorization metadata on success, or an empty array on failure.
      */
     private function processTransactionAction(array $transactionAction, User $user): array
     {
         $dto = $this->buildTransactionDto($transactionAction);
         if (!$dto) {
-            return []; // Invalid data, skip transaction processing
+            return [];
         }
 
         try {
-            $transaction = $this->transactionService->createTransaction($dto, $user);
+            $transaction       = $this->transactionService->createTransaction($dto, $user);
             $suggestedCategory = $this->resolveCategory($transactionAction['category_name'] ?? null, $dto->type);
 
             return $this->buildPendingCategorizationMetadata($transaction, $dto->type, $suggestedCategory);
         } catch (\Exception $e) {
             $this->logger->error('processTransactionAction failed: ' . $e->getMessage(), [
-                'exception' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'exception'          => $e->getMessage(),
+                'trace'              => $e->getTraceAsString(),
                 'transaction_action' => $transactionAction,
             ]);
             return [];
@@ -123,12 +120,12 @@ class ChatService
     }
 
     /**
-     * Builds and validates a CreateTransactionRequest from  the LLM action data.
+     * Builds and validates a CreateTransactionRequest from the LLM action data.
      * Returns null if validation fails.
      */
     private function buildTransactionDto(array $transactionAction): ?CreateTransactionRequest
     {
-        $dto = new CreateTransactionRequest();
+        $dto         = new CreateTransactionRequest();
         $dto->name   = $transactionAction['name']   ?? null;
         $dto->type   = $transactionAction['type']   ?? null;
         $dto->amount = isset($transactionAction['amount']) ? (float) $transactionAction['amount'] : null;
@@ -147,12 +144,11 @@ class ChatService
         return $dto;
     }
 
-
     /**
-     * Looks up a category entity by name and type.
+     * Looks up a Category entity by name and type.
      * Returns null if the name is absent, equals 'Otros', or no match is found.
      */
-    private function resolveCategory(?string $categoryName, string $transactionType):  ?\App\Entity\Category
+    private function resolveCategory(?string $categoryName, string $transactionType): ?Category
     {
         if (!$categoryName || $categoryName === 'Otros') {
             return null;
@@ -160,49 +156,29 @@ class ChatService
 
         return $this->categoryRepository->findOneBy([
             'name' => $categoryName,
-            'type' => $transactionType
+            'type' => $transactionType,
         ]);
     }
 
     /**
-     * Builds the transaction_created metadata payload.
-     */
-    private function buildTransactionCreatedMetadata(
-        \App\Entity\Transaction $transaction,
-        \App\Entity\Category $category
-    ): array {
-        return [
-            'transaction_created' => [
-                'id' => $transaction->getId(),
-                'name' => $transaction->getName(),
-                'type' => $transaction->getType(),
-                'amount' => $transaction->getAmount(),
-                'date' => $transaction->getDate()->format('Y-m-d'),
-                'categoryId' => $category->getId(),
-                'categoryName' => $category->getName(),
-            ],
-        ];
-    }
-
-
-    /**
-     * Builds the pending_categorization metadata payload with the list of
-     * available categories so the user can pick one from the chat.
+     * Builds the pending_categorization metadata payload with the list of available
+     * categories so the user can pick one from the chat UI.
+     * Uses the transaction's actual date rather than the current date.
      */
     private function buildPendingCategorizationMetadata(
-        \App\Entity\Transaction $transaction,
+        Transaction $transaction,
         string $transactionType,
-        ?\App\Entity\Category $suggestedCategory = null
+        ?Category $suggestedCategory = null
     ): array {
         $available = $this->categoryRepository->findBy(['type' => $transactionType]);
 
-        $suggested = $suggestedCategory !== null 
+        $suggested = $suggestedCategory !== null
             ? ['id' => $suggestedCategory->getId(), 'name' => $suggestedCategory->getName()]
             : null;
 
         $otherCategories = array_values(array_filter(
             $available,
-            fn($cat) => $suggestedCategory === null || $cat->getId() !== $suggestedCategory->getId()
+            fn(Category $cat) => $suggestedCategory === null || $cat->getId() !== $suggestedCategory->getId()
         ));
 
         return [
@@ -211,10 +187,10 @@ class ChatService
                 'name'               => $transaction->getName(),
                 'type'               => $transaction->getType(),
                 'amount'             => $transaction->getAmount(),
-                'date'               => (new \DateTime())->format('Y-m-d'),
+                'date'               => $transaction->getDate()->format('Y-m-d'),
                 'suggested_category' => $suggested,
                 'categories'         => array_map(
-                    fn($cat) => ['id' => $cat->getId(), 'name' => $cat->getName()],
+                    fn(Category $cat) => ['id' => $cat->getId(), 'name' => $cat->getName()],
                     $otherCategories
                 ),
             ],
@@ -223,6 +199,8 @@ class ChatService
 
     /**
      * Returns all conversations for the given user.
+     *
+     * @return ChatConversation[]
      */
     public function getUserConversations(User $user): array
     {
@@ -230,7 +208,8 @@ class ChatService
     }
 
     /**
-     * Returns a conversation with its messages if it belongs to the user.
+     * Returns a conversation with its messages if it belongs to the given user.
+     * Returns null if the conversation does not exist or belongs to a different user.
      */
     public function getConversation(int $id, User $user): ?ChatConversation
     {
@@ -238,7 +217,7 @@ class ChatService
     }
 
     /**
-     * Deletes a conversation and all its messages.
+     * Deletes a conversation and all its messages (cascade handled by Doctrine).
      */
     public function deleteConversation(ChatConversation $conversation): void
     {
@@ -247,7 +226,8 @@ class ChatService
     }
 
     /**
-     * Retrieves an existing conversation or creates a new one.
+     * Returns an existing conversation matching the DTO's conversationId,
+     * or creates and persists a new one if no ID was provided or the ID is not found.
      */
     private function getOrCreateConversation(ChatRequestDTO $dto, User $user): ChatConversation
     {
@@ -269,7 +249,7 @@ class ChatService
     }
 
     /**
-     * Generates a conversation title from the first message.
+     * Generates a conversation title by truncating the first message to 50 characters.
      */
     private function generateTitle(string $message): string
     {
@@ -279,10 +259,10 @@ class ChatService
     }
 
     /**
-     * Calls the LLM Service classify-context endpoint.
-     * Validates Safety (ToxicLanguage + DetectPII) and classifies the context type.
-     * Throws \RuntimeException with the guardrails detail on HTTP 422.
-     * Falls back to "none" on network or classification errors so the main flow is never blocked.
+     * Calls the LLM service classify-context endpoint to determine the context type needed.
+     * Validates safety guardrails (ToxicLanguage + DetectPII) and throws RuntimeException
+     * with code 422 if the message is rejected. Falls back to "none" on network errors
+     * so the main message flow is never blocked by a classification failure.
      */
     private function classifyContextNeeds(string $message): string
     {
@@ -293,7 +273,6 @@ class ChatService
                 'max_duration' => 15,
             ]);
 
-            // Propagate Safety rejections (422) — do not swallow them
             if ($response->getStatusCode() === 422) {
                 $detail = $response->toArray(false);
                 throw new \RuntimeException(
@@ -315,13 +294,13 @@ class ChatService
     }
 
     /**
-     * Calls the LLM Service and returns the response.
+     * Sends the chat request payload to the LLM service and returns the decoded response array.
      */
     private function callLlmService(LlmChatRequestDTO $request): array
     {
         $response = $this->httpClient->request('POST', $this->llmServiceUrl . '/llm/chat', [
-            'json' => $request->toArray(),
-            'timeout' => 120,
+            'json'         => $request->toArray(),
+            'timeout'      => 120,
             'max_duration' => 120,
         ]);
 
