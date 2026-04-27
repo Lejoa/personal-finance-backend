@@ -7,6 +7,7 @@ use App\DTO\UpdateBudgetRequest;
 use App\Entity\Budget;
 use App\Entity\BudgetCategory;
 use App\Entity\User;
+use App\Repository\BudgetCategoryRepository;
 use App\Repository\BudgetRepository;
 use App\Repository\CategoryRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -16,12 +17,14 @@ class BudgetService
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly BudgetRepository $budgetRepository,
+        private readonly BudgetCategoryRepository $budgetCategoryRepository,
         private readonly CategoryRepository $categoryRepository
     ) {
     }
 
     /**
-     * Create a new budget for a user
+     * Creates a new Budget with its BudgetCategory entries for the given user.
+     * Throws InvalidArgumentException if any referenced category ID does not exist.
      */
     public function createBudget(CreateBudgetRequest $dto, User $user): Budget
     {
@@ -30,13 +33,12 @@ class BudgetService
         $budget->setStartDate(new \DateTime($dto->startDate));
         $budget->setEndDate(new \DateTime($dto->endDate));
 
-        // Add budget categories with amounts
         foreach ($dto->categories as $categoryData) {
             $category = $this->categoryRepository->find($categoryData['categoryId']);
 
             if (!$category) {
                 throw new \InvalidArgumentException(
-                    "La categoría con ID {$categoryData['categoryId']} no existe."
+                    "Category with ID {$categoryData['categoryId']} does not exist."
                 );
             }
 
@@ -54,43 +56,41 @@ class BudgetService
     }
 
     /**
-     * Update an existing budget
+     * Updates an existing Budget's dates and/or category list.
+     * Only fields present (non-null) in the DTO are applied — null fields are left unchanged.
+     * When categories are provided, the existing set is fully replaced.
+     * Throws InvalidArgumentException if any referenced category ID does not exist or dates are invalid.
      */
     public function updateBudget(Budget $budget, UpdateBudgetRequest $dto): Budget
     {
         if ($dto->startDate !== null) {
             try {
-                $startDate = new \DateTime($dto->startDate);
-                $budget->setStartDate($startDate);
-            } catch (\Exception $e) {
-                throw new \InvalidArgumentException('Formato de fecha de inicio inválido. Use YYYY-MM-DD');
+                $budget->setStartDate(new \DateTime($dto->startDate));
+            } catch (\Exception) {
+                throw new \InvalidArgumentException('Invalid start date format. Use YYYY-MM-DD.');
             }
         }
 
         if ($dto->endDate !== null) {
             try {
-                $endDate = new \DateTime($dto->endDate);
-                $budget->setEndDate($endDate);
-            } catch (\Exception $e) {
-                throw new \InvalidArgumentException('Formato de fecha de fin inválido. Use YYYY-MM-DD');
+                $budget->setEndDate(new \DateTime($dto->endDate));
+            } catch (\Exception) {
+                throw new \InvalidArgumentException('Invalid end date format. Use YYYY-MM-DD.');
             }
         }
 
-        // Update categories if provided
         if ($dto->categories !== null) {
-            // Remove all existing budget categories
             foreach ($budget->getBudgetCategories() as $budgetCategory) {
                 $budget->removeBudgetCategory($budgetCategory);
                 $this->entityManager->remove($budgetCategory);
             }
 
-            // Add new budget categories
             foreach ($dto->categories as $categoryData) {
                 $category = $this->categoryRepository->find($categoryData['categoryId']);
 
                 if (!$category) {
                     throw new \InvalidArgumentException(
-                        "La categoría con ID {$categoryData['categoryId']} no existe."
+                        "Category with ID {$categoryData['categoryId']} does not exist."
                     );
                 }
 
@@ -108,7 +108,7 @@ class BudgetService
     }
 
     /**
-     * Delete a budget
+     * Deletes a budget and all its associated categories (cascade handled by Doctrine).
      */
     public function deleteBudget(Budget $budget): void
     {
@@ -117,7 +117,7 @@ class BudgetService
     }
 
     /**
-     * Update the amount of a single BudgetCategory.
+     * Updates the budgeted amount for a single BudgetCategory and persists the change.
      */
     public function updateBudgetCategoryAmount(BudgetCategory $budgetCategory, float $amount): BudgetCategory
     {
@@ -128,8 +128,8 @@ class BudgetService
     }
 
     /**
-     * Remove a single BudgetCategory from its budget.
-     * If the budget has no remaining categories, delete the budget as well.
+     * Removes a single BudgetCategory from its parent Budget.
+     * If no categories remain after removal, the Budget itself is also deleted.
      */
     public function removeBudgetCategory(BudgetCategory $budgetCategory): void
     {
@@ -138,7 +138,6 @@ class BudgetService
         $budget->removeBudgetCategory($budgetCategory);
         $this->entityManager->remove($budgetCategory);
 
-        // If no categories remain, remove the budget itself
         if ($budget->getBudgetCategories()->isEmpty()) {
             $this->entityManager->remove($budget);
         }
@@ -147,7 +146,9 @@ class BudgetService
     }
 
     /**
-     * Get all budgets for a user
+     * Returns all budgets for the given user, ordered by creation date descending.
+     *
+     * @return Budget[]
      */
     public function getUserBudgets(User $user): array
     {
@@ -158,16 +159,20 @@ class BudgetService
     }
 
     /**
-     * Get a specific budget by ID for a user
+     * Returns a Budget by ID scoped to the given user.
+     * Returns null if the budget does not exist or belongs to a different user.
      */
     public function getUserBudgetById(int $id, User $user): ?Budget
     {
-        $budget = $this->budgetRepository->find($id);
+        return $this->budgetRepository->findByIdForUser($id, $user);
+    }
 
-        if (!$budget || $budget->getUser()->getId() !== $user->getId()) {
-            return null;
-        }
-
-        return $budget;
+    /**
+     * Finds a BudgetCategory by ID, scoped to the given budget.
+     * Returns null if the category does not exist or belongs to a different budget.
+     */
+    public function findCategoryInBudget(int $budgetCategoryId, int $budgetId): ?BudgetCategory
+    {
+        return $this->budgetCategoryRepository->findByIdForBudget($budgetCategoryId, $budgetId);
     }
 }
