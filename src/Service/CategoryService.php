@@ -17,7 +17,7 @@ class CategoryService
     }
 
     /**
-     * Create a new category
+     * Creates a new Category entity from the given DTO and persists it to the database.
      */
     public function createCategory(CreateCategoryRequest $dto): Category
     {
@@ -33,7 +33,8 @@ class CategoryService
     }
 
     /**
-     * Update an existing category
+     * Applies non-null DTO fields to an existing Category and flushes the change.
+     * Fields not present in the DTO (null) are left unchanged.
      */
     public function updateCategory(Category $category, UpdateCategoryRequest $dto): Category
     {
@@ -51,8 +52,8 @@ class CategoryService
     }
 
     /**
-     * Delete a category.
-     * Throws \InvalidArgumentException if transactions reference this category.
+     * Deletes the given Category from the database.
+     * Throws InvalidArgumentException if one or more transactions still reference this category.
      */
     public function deleteCategory(Category $category): void
     {
@@ -62,8 +63,8 @@ class CategoryService
 
         if ($transactionCount > 0) {
             throw new \InvalidArgumentException(
-                "No se puede eliminar la categoría \"{$category->getName()}\" porque tiene {$transactionCount} " .
-                ($transactionCount === 1 ? 'transacción asociada.' : 'transacciones asociadas.')
+                "Cannot delete category \"{$category->getName()}\" because it has {$transactionCount} " .
+                ($transactionCount === 1 ? 'associated transaction.' : 'associated transactions.')
             );
         }
 
@@ -72,9 +73,11 @@ class CategoryService
     }
 
     /**
-     * Get all categories with optional filters
+     * Returns all categories matching the given optional filters, ordered by creation date descending.
+     *
+     * @return Category[]
      */
-    public function getAllCategories($user = null, ?string $type = null, ?string $name = null): array
+    public function getAllCategories(?string $type = null, ?string $name = null): array
     {
         $criteria = [];
 
@@ -86,14 +89,11 @@ class CategoryService
             $criteria['name'] = $name;
         }
 
-        return $this->categoryRepository->findBy(
-            $criteria,
-            ['createdAt' => 'DESC']
-        );
+        return $this->categoryRepository->findBy($criteria, ['createdAt' => 'DESC']);
     }
 
     /**
-     * Get category by ID
+     * Finds a single Category by its primary key. Returns null if not found.
      */
     public function getCategoryById(int $id): ?Category
     {
