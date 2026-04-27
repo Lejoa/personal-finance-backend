@@ -5,7 +5,6 @@ namespace App\Service;
 use App\Entity\FinancialAnalysis;
 use App\Entity\User;
 use App\Repository\FinancialAnalysisRepository;
-use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -22,8 +21,10 @@ class AnalysisService
     }
 
     /**
-     * Generates a pedagogical analysis for a user at a given checkpoint (mid|end).
-     * Skips generation if an analysis already exists for that period+checkpoint.
+     * Generates a pedagogical financial analysis for a user at the given checkpoint ("mid" or "end").
+     * Skips generation if an analysis already exists for the current period and checkpoint.
+     * Calls the external LLM service, persists the result, and triggers a notification.
+     * Returns null if generation was skipped or the LLM returned no content.
      */
     public function generateForUser(User $user, string $checkpoint): ?FinancialAnalysis
     {
@@ -39,12 +40,12 @@ class AnalysisService
         try {
             $response = $this->httpClient->request('POST', $this->llmServiceUrl . '/llm/financial-insights', [
                 'json' => [
-                    'user_context'      => $context['userContext'],
-                    'summary'           => $context['summary'],
-                    'categories'        => $context['categories'],
-                    'budgets'           => $context['budgets'],
-                    'top_tip'           => $context['top_tip'],
-                    'goal'              => $goal,
+                    'user_context' => $context['userContext'],
+                    'summary'      => $context['summary'],
+                    'categories'   => $context['categories'],
+                    'budgets'      => $context['budgets'],
+                    'top_tip'      => $context['top_tip'],
+                    'goal'         => $goal,
                 ],
                 'timeout'      => 300,
                 'max_duration' => 300,
@@ -75,6 +76,8 @@ class AnalysisService
     }
 
     /**
+     * Returns all FinancialAnalysis records for the given user, ordered by generation date descending.
+     *
      * @return FinancialAnalysis[]
      */
     public function getUserAnalyses(User $user): array
@@ -82,6 +85,19 @@ class AnalysisService
         return $this->analysisRepository->findByUser($user);
     }
 
+    /**
+     * Finds a single FinancialAnalysis by ID, scoped to the authenticated user.
+     * Returns null if the analysis does not exist or belongs to a different user.
+     */
+    public function findByIdAndUser(int $id, User $user): ?FinancialAnalysis
+    {
+        return $this->analysisRepository->findByIdForUser($id, $user);
+    }
+
+    /**
+     * Marks a FinancialAnalysis as read and persists the change.
+     * Skips the flush if the analysis is already marked as read to avoid unnecessary writes.
+     */
     public function markAsRead(FinancialAnalysis $analysis): void
     {
         if (!$analysis->isRead()) {
@@ -90,6 +106,10 @@ class AnalysisService
         }
     }
 
+    /**
+     * Builds the pedagogical goal prompt string for the given checkpoint type.
+     * Returns a mid-month prompt for "mid", or an end-of-month prompt otherwise.
+     */
     private function buildGoal(string $checkpoint): string
     {
         if ($checkpoint === 'mid') {

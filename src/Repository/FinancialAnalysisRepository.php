@@ -42,4 +42,20 @@ class FinancialAnalysisRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
+
+    /**
+     * Finds a single FinancialAnalysis by its primary key, scoped to the given user.
+     * Returns null if the record does not exist or belongs to a different user.
+     * Prevents cross-user data access (IDOR) at the database query level.
+     */
+    public function findByIdForUser(int $id, User $user): ?FinancialAnalysis
+    {
+        return $this->createQueryBuilder('a')
+            ->where('a.id = :id')
+            ->andWhere('a.user = :user')
+            ->setParameter('id', $id)
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }
