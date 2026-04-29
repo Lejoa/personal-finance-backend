@@ -18,6 +18,21 @@ class TransactionRepository extends ServiceEntityRepository
     }
 
     /**
+     * Returns a transaction by ID only if it belongs to the given user.
+     * Performs the ownership check at SQL level to prevent IDOR.
+     */
+    public function findByIdForUser(int $id, User $user): ?Transaction
+    {
+        return $this->createQueryBuilder('t')
+            ->where('t.id = :id')
+            ->andWhere('t.user = :user')
+            ->setParameter('id', $id)
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
      * Find transactions with filters: type, date range and limit
      * @return Transaction[]
      */

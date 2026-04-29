@@ -23,7 +23,10 @@ class TransactionService
     }
 
     /**
-     * Create a new transaction for a user
+     * Creates and persists a new transaction for the given user.
+     * For SMS-sourced transactions, deduplicates by note before inserting —
+     * returns the existing transaction if a match is found.
+     * Invalidates the financial digest cache after creation.
      */
     public function createTransaction(CreateTransactionRequest $dto, User $user): Transaction
     {
@@ -45,7 +48,7 @@ class TransactionService
             $transaction->setNote($dto->note);
         }
 
-        if($dto->source) {
+        if ($dto->source) {
             $transaction->setSource($dto->source);
         }
 
@@ -58,34 +61,13 @@ class TransactionService
     }
 
     /**
-     * Update an existing transaction
+     * Applies non-null scalar DTO fields to the transaction via applyTo(), then resolves
+     * the category lookup if a categoryId was provided. Flushes all changes in a single call.
+     * Throws InvalidArgumentException if the date string is not parseable.
      */
     public function updateTransaction(Transaction $transaction, UpdateTransactionRequest $dto): Transaction
     {
-        if ($dto->name !== null) {
-            $transaction->setName($dto->name);
-        }
-
-        if ($dto->type !== null) {
-            $transaction->setType($dto->type);
-        }
-
-        if ($dto->amount !== null) {
-            $transaction->setAmount($dto->amount);
-        }
-
-        if ($dto->date !== null) {
-            try {
-                $date = new \DateTime($dto->date);
-                $transaction->setDate($date);
-            } catch (\Exception $e) {
-                throw new \InvalidArgumentException('Formato de fecha inválido. Use YYYY-MM-DD');
-            }
-        }
-
-        if ($dto->note !== null) {
-            $transaction->setNote($dto->note);
-        }
+        $dto->applyTo($transaction);
 
         if ($dto->categoryId !== null) {
             $category = $this->categoryRepository->find($dto->categoryId);
@@ -94,17 +76,13 @@ class TransactionService
             }
         }
 
-        if ($dto->synchronized !== null) {
-            $transaction->setSynchronized($dto->synchronized);
-        }
-
         $this->entityManager->flush();
 
         return $transaction;
     }
 
     /**
-     * Delete a transaction
+     * Removes the transaction from the database and invalidates the financial digest cache.
      */
     public function deleteTransaction(Transaction $transaction): void
     {
@@ -115,7 +93,10 @@ class TransactionService
     }
 
     /**
-     * Get all transactions for a user with optional filters
+     * Returns all transactions for the given user matching the optional filters.
+     * Date strings are converted to DateTime objects before being passed to the repository.
+     *
+     * @return Transaction[]
      */
     public function getUserTransactions(
         User $user,
@@ -126,7 +107,7 @@ class TransactionService
         ?string $synchronized = null
     ): array {
         $start = $startDate ? new \DateTime($startDate) : null;
-        $end = $endDate ? new \DateTime($endDate) : null;
+        $end   = $endDate   ? new \DateTime($endDate)   : null;
 
         return $this->transactionRepository->findByFilters(
             $user,
@@ -139,7 +120,7 @@ class TransactionService
     }
 
     /**
-     * Assigns a category to an existing transaction.
+     * Assigns a category to an existing transaction and flushes the change.
      */
     public function assignCategory(Transaction $transaction, Category $category): void
     {
@@ -150,11 +131,12 @@ class TransactionService
     /**
      * Generates a formative, motivational feedback message after a transaction is confirmed.
      * Tone is always positive and data-driven — never alarmist or judgmental.
+     * Returns null only when no feedback case is matched (should not occur in practice).
      */
     public function buildFormativeFeedback(Transaction $transaction, User $user): ?string
     {
         $category = $transaction->getCategory();
-        $amount = $transaction->getAmount();
+        $amount   = $transaction->getAmount();
 
         if ($transaction->getType() === 'ingreso') {
             $totalIncome = $this->transactionRepository->getCurrentMonthIncome($user);
@@ -169,18 +151,18 @@ class TransactionService
             return FeedbackMessages::EXPENSE_NO_CATEGORY;
         }
 
-        $categoryId = $category->getId();
+        $categoryId   = $category->getId();
         $categoryName = $category->getName();
 
-        $history = $this->transactionRepository->getMonthlyCategorySpending($user, $categoryId, 3);
-        $currentMonthTotal = $this->transactionRepository->getCurrentMonthCategorySpending($user, $categoryId);
+        $history            = $this->transactionRepository->getMonthlyCategorySpending($user, $categoryId, 3);
+        $currentMonthTotal  = $this->transactionRepository->getCurrentMonthCategorySpending($user, $categoryId);
 
         if (empty($history)) {
             return sprintf(FeedbackMessages::EXPENSE_FIRST_TIME, $categoryName);
         }
 
         $average = array_sum(array_column($history, 'total')) / count($history);
-        $delta = $average > 0 ? (($currentMonthTotal - $average) / $average) : 0;
+        $delta   = $average > 0 ? (($currentMonthTotal - $average) / $average) : 0;
 
         if ($delta < -0.1) {
             return sprintf(
@@ -208,22 +190,20 @@ class TransactionService
         );
     }
 
-    private function formatCOP(float $amount): string
-    {
-        return '$' . number_format($amount, 0, ',', '.');
-    }
-
     /**
-     * Get transaction by ID and verify ownership
+     * Returns a transaction by ID only if it belongs to the given user.
+     * Delegates the ownership check to the repository (SQL level) to prevent IDOR.
      */
     public function getTransactionById(int $id, User $user): ?Transaction
     {
-        $transaction = $this->transactionRepository->find($id);
+        return $this->transactionRepository->findByIdForUser($id, $user);
+    }
 
-        if (!$transaction || $transaction->getUser()->getId() !== $user->getId()) {
-            return null;
-        }
-
-        return $transaction;
+    /**
+     * Formats a float amount as a Colombian peso string (e.g. $1.250.000).
+     */
+    private function formatCOP(float $amount): string
+    {
+        return '$' . number_format($amount, 0, ',', '.');
     }
 }
