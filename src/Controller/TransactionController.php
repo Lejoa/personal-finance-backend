@@ -11,7 +11,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\SerializerInterface;
@@ -98,60 +97,6 @@ class TransactionController extends AbstractController
             'data'  => array_map(fn(Transaction $transaction) => $this->serializeTransaction($transaction), $transactions),
             'total' => count($transactions),
         ]);
-    }
-
-    /**
-     * Streams all matching transactions as a UTF-8 CSV file for download.
-     * Supports the same filters as getAll(): type, startDate, endDate, categoryId.
-     * The categoryId filter is applied in-memory after the DB query because the
-     * repository does not expose a category-based filter natively.
-     * Must be declared before /{id} to prevent Symfony from matching "export" as an id.
-     */
-    #[Route('/export/csv', name: 'api_transaction_export_csv', methods: ['GET'])]
-    public function exportCsv(Request $request): StreamedResponse
-    {
-        /** @var User $user */
-        $user       = $this->getUser();
-        $type       = $request->query->get('type');
-        $startDate  = $request->query->get('startDate');
-        $endDate    = $request->query->get('endDate');
-        $categoryId = $request->query->get('categoryId');
-
-        $transactions = $this->transactionService->getUserTransactions(
-            $user, $type, $startDate, $endDate, null, null
-        );
-
-        if ($categoryId !== null && $categoryId !== '') {
-            $transactions = array_values(array_filter(
-                $transactions,
-                fn(Transaction $t) => $t->getCategory()?->getId() === (int) $categoryId
-            ));
-        }
-
-        $filename = 'transacciones_' . (new \DateTimeImmutable())->format('Y-m-d') . '.csv';
-
-        $response = new StreamedResponse(function () use ($transactions) {
-            $handle = fopen('php://output', 'w');
-            fwrite($handle, "\xEF\xBB\xBF");
-            fputcsv($handle, ['Fecha', 'Nombre', 'Tipo', 'Categoría', 'Monto', 'Nota', 'Fuente']);
-            foreach ($transactions as $t) {
-                fputcsv($handle, [
-                    $t->getDate()?->format('d/m/Y') ?? '',
-                    $t->getName() ?? '',
-                    $t->getType() === 'ingreso' ? 'Ingreso' : 'Gasto',
-                    $t->getCategory()?->getName() ?? '',
-                    $t->getAmount() ?? 0,
-                    $t->getNote() ?? '',
-                    $t->getSource() === 'sms' ? 'SMS' : 'Manual',
-                ]);
-            }
-            fclose($handle);
-        });
-
-        $response->headers->set('Content-Type', 'text/csv; charset=utf-8');
-        $response->headers->set('Content-Disposition', 'attachment; filename="' . $filename . '"');
-
-        return $response;
     }
 
     /**
