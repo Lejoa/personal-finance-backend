@@ -31,4 +31,34 @@ class BudgetCategoryRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
+
+    /**
+     * Returns the budgeted amounts for a category across previous budgets of the same user,
+     * excluding the budget that contains the given BudgetCategory.
+     * Used to compute historical average limits for formative feedback.
+     *
+     * @return float[]
+     */
+    public function getPreviousBudgetAmounts(BudgetCategory $budgetCategory, int $limit = 3): array
+    {
+        $category      = $budgetCategory->getCategory();
+        $currentBudget = $budgetCategory->getBudget();
+        $user          = $currentBudget->getUser();
+
+        $rows = $this->createQueryBuilder('bc')
+            ->select('bc.amount')
+            ->join('bc.budget', 'b')
+            ->where('bc.category = :category')
+            ->andWhere('b.user = :user')
+            ->andWhere('b.id != :currentBudgetId')
+            ->orderBy('b.startDate', 'DESC')
+            ->setMaxResults($limit)
+            ->setParameter('category', $category)
+            ->setParameter('user', $user)
+            ->setParameter('currentBudgetId', $currentBudget->getId())
+            ->getQuery()
+            ->getResult();
+
+        return array_column($rows, 'amount');
+    }
 }

@@ -203,6 +203,31 @@ class BudgetController extends AbstractController
     }
 
     /**
+     * Returns a contextual feedback message after a budget category limit is set or updated.
+     * Compares the new limit against the average monthly spending over the last 3 months.
+     */
+    #[Route('/{budgetId}/categories/{budgetCategoryId}/feedback', name: 'api_budgets_category_feedback', methods: ['POST'])]
+    public function categoryFeedback(int $budgetId, int $budgetCategoryId): JsonResponse
+    {
+        /** @var User $user */
+        $user   = $this->getUser();
+        $budget = $this->budgetService->getUserBudgetById($budgetId, $user);
+
+        if ($budget === null) {
+            return $this->json(['error' => 'Budget not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $budgetCategory = $this->budgetService->findCategoryInBudget($budgetCategoryId, $budgetId);
+        if ($budgetCategory === null) {
+            return $this->json(['error' => 'Budget category not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $feedback = $this->budgetService->buildFormativeFeedback($budgetCategory);
+
+        return $this->json(['feedback' => $feedback]);
+    }
+
+    /**
      * Shared update logic for PUT and PATCH — both accept the same DTO and validation flow.
      * BudgetService.updateBudget handles partial fields via nullable DTO properties,
      * so no distinction between full and partial update is needed at the controller level.

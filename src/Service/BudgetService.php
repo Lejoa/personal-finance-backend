@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Constants\FeedbackMessages;
 use App\DTO\CreateBudgetRequest;
 use App\DTO\UpdateBudgetRequest;
 use App\Entity\Budget;
@@ -18,7 +19,7 @@ class BudgetService
         private readonly EntityManagerInterface $entityManager,
         private readonly BudgetRepository $budgetRepository,
         private readonly BudgetCategoryRepository $budgetCategoryRepository,
-        private readonly CategoryRepository $categoryRepository
+        private readonly CategoryRepository $categoryRepository,
     ) {
     }
 
@@ -174,5 +175,44 @@ class BudgetService
     public function findCategoryInBudget(int $budgetCategoryId, int $budgetId): ?BudgetCategory
     {
         return $this->budgetCategoryRepository->findByIdForBudget($budgetCategoryId, $budgetId);
+    }
+
+    /**
+     * Generates a contextual feedback message after a budget category limit is set or updated.
+     * Compares the new limit against the average monthly spending in the same category
+     * over the last 3 months to produce one of three motivational messages.
+     */
+    public function buildFormativeFeedback(BudgetCategory $budgetCategory): string
+    {
+        $categoryName    = $budgetCategory->getCategory()->getName();
+        $newLimit        = $budgetCategory->getAmount();
+        $previousAmounts = $this->budgetCategoryRepository->getPreviousBudgetAmounts($budgetCategory, 3);
+
+        if (empty($previousAmounts)) {
+            return sprintf(FeedbackMessages::BUDGET_FIRST_TIME, $categoryName);
+        }
+
+        $average = array_sum($previousAmounts) / count($previousAmounts);
+
+        if ($newLimit < $average) {
+            return sprintf(
+                FeedbackMessages::BUDGET_BELOW_AVERAGE,
+                $this->formatCOP($newLimit),
+                $categoryName,
+                $this->formatCOP($average)
+            );
+        }
+
+        return sprintf(
+            FeedbackMessages::BUDGET_ABOVE_AVERAGE,
+            $this->formatCOP($newLimit),
+            $categoryName,
+            $this->formatCOP($average)
+        );
+    }
+
+    private function formatCOP(float $amount): string
+    {
+        return number_format($amount, 0, ',', '.');
     }
 }

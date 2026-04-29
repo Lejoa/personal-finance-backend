@@ -21,4 +21,13 @@ class FeedbackMessages
 
     // Gasto mayor al promedio histórico (delta > +20%)
     public const EXPENSE_ABOVE_AVERAGE = "Este mes llevas %s COP en %s. Tu promedio mensual es de %s COP. ¿Hubo algo especial que lo motivó?";
+
+    // Presupuesto — primera vez que se presupuesta la categoría
+    public const BUDGET_FIRST_TIME = "Primera vez que presupuestas la categoría %s. ¡Buen comienzo para tomar control de tus finanzas!";
+
+    // Presupuesto — límite fijado por debajo del gasto promedio de los últimos 3 meses
+    public const BUDGET_BELOW_AVERAGE = "Fijaste un límite de %s COP en %s, por debajo de tu gasto promedio de %s COP en los últimos 3 meses. ¡Buen propósito de ahorro!";
+
+    // Presupuesto — límite fijado por encima del gasto promedio de los últimos 3 meses
+    public const BUDGET_ABOVE_AVERAGE = "Fijaste un límite de %s COP en %s, por encima de tu gasto promedio de %s COP en los últimos 3 meses. ¿Planeas gastar más este mes?";
 }
