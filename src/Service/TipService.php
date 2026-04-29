@@ -21,7 +21,7 @@ class TipService
     }
 
     /**
-     * Create a new tip
+     * Creates a new Tip entity from the given DTO and persists it to the database.
      */
     public function createTip(CreateTipRequest $dto): Tip
     {
@@ -41,45 +41,19 @@ class TipService
     }
 
     /**
-     * Update an existing tip
+     * Applies non-null DTO fields to an existing Tip and flushes the change.
+     * Fields not present in the DTO (null) are left unchanged.
      */
     public function updateTip(Tip $tip, UpdateTipRequest $dto): Tip
     {
-        if ($dto->title !== null) {
-            $tip->setTitle($dto->title);
-        }
-
-        if ($dto->author !== null) {
-            $tip->setAuthor($dto->author);
-        }
-
-        if ($dto->description !== null) {
-            $tip->setDescription($dto->description);
-        }
-
-        if ($dto->shortDescription !== null) {
-            $tip->setShortDescription($dto->shortDescription);
-        }
-
-        if ($dto->authorTitle !== null) {
-            $tip->setAuthorTitle($dto->authorTitle);
-        }
-
-        if ($dto->imageSrc !== null) {
-            $tip->setImageSrc($dto->imageSrc);
-        }
-
-        if ($dto->tags !== null) {
-            $tip->setTags($dto->tags);
-        }
-
+        $dto->applyTo($tip);
         $this->entityManager->flush();
 
         return $tip;
     }
 
     /**
-     * Delete a tip
+     * Deletes the given Tip from the database.
      */
     public function deleteTip(Tip $tip): void
     {
@@ -88,7 +62,9 @@ class TipService
     }
 
     /**
-     * Get all tips
+     * Returns all tips ordered by creation date descending.
+     *
+     * @return Tip[]
      */
     public function getAllTips(): array
     {
@@ -99,7 +75,7 @@ class TipService
     }
 
     /**
-     * Get tip by ID
+     * Finds a single Tip by its primary key. Returns null if not found.
      */
     public function getTipById(int $id): ?Tip
     {

@@ -2,6 +2,7 @@
 
 namespace App\DTO;
 
+use App\Entity\Tip;
 use Symfony\Component\Validator\Constraints as Assert;
 
 class UpdateTipRequest
@@ -47,4 +48,19 @@ class UpdateTipRequest
         maxMessage: 'Los tags no pueden tener más de {{ limit }} caracteres.'
     )]
     public ?string $tags = null;
+
+    /**
+     * Applies all non-null DTO fields to the given Tip entity.
+     * Fields left as null are not modified on the entity.
+     */
+    public function applyTo(Tip $tip): void
+    {
+        if ($this->title !== null)            { $tip->setTitle($this->title); }
+        if ($this->author !== null)           { $tip->setAuthor($this->author); }
+        if ($this->description !== null)      { $tip->setDescription($this->description); }
+        if ($this->shortDescription !== null) { $tip->setShortDescription($this->shortDescription); }
+        if ($this->authorTitle !== null)      { $tip->setAuthorTitle($this->authorTitle); }
+        if ($this->imageSrc !== null)         { $tip->setImageSrc($this->imageSrc); }
+        if ($this->tags !== null)             { $tip->setTags($this->tags); }
+    }
 }
