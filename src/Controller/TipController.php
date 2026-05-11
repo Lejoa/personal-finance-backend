@@ -43,7 +43,7 @@ class TipController extends AbstractController
             $dto = $this->serializer->deserialize($request->getContent(), CreateTipRequest::class, 'json');
 
             $errors = $this->validator->validate($dto);
-            if (count($errors) > 0) {
+            if (\count($errors) > 0) {
                 return $this->json(
                     ['error' => 'Validation failed', 'violations' => $this->formatErrors($errors)],
                     Response::HTTP_BAD_REQUEST
@@ -74,8 +74,8 @@ class TipController extends AbstractController
         $tips = $this->tipService->getAllTips();
 
         return $this->json([
-            'data'  => array_map(fn(Tip $tip) => $this->serializeTip($tip), $tips),
-            'total' => count($tips),
+            'data' => array_map(fn (Tip $tip) => $this->serializeTip($tip), $tips),
+            'total' => \count($tips),
         ]);
     }
 
@@ -89,15 +89,15 @@ class TipController extends AbstractController
     public function recommended(): JsonResponse
     {
         /** @var User $user */
-        $user    = $this->getUser();
+        $user = $this->getUser();
         $results = $this->tipService->getRecommendedTips($user);
 
         return $this->json([
-            'data'  => array_map(
-                fn($result) => array_merge($this->serializeTip($result['tip']), ['reason' => $result['reason']]),
+            'data' => array_map(
+                fn ($result) => array_merge($this->serializeTip($result['tip']), ['reason' => $result['reason']]),
                 $results
             ),
-            'total' => count($results),
+            'total' => \count($results),
         ]);
     }
 
@@ -110,7 +110,7 @@ class TipController extends AbstractController
     {
         $tip = $this->tipService->getTipById($id);
 
-        if ($tip === null) {
+        if (null === $tip) {
             return $this->json(['error' => 'Tip not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -126,7 +126,7 @@ class TipController extends AbstractController
     {
         $tip = $this->tipService->getTipById($id);
 
-        if ($tip === null) {
+        if (null === $tip) {
             return $this->json(['error' => 'Tip not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -134,7 +134,7 @@ class TipController extends AbstractController
             $dto = $this->serializer->deserialize($request->getContent(), UpdateTipRequest::class, 'json');
 
             $errors = $this->validator->validate($dto);
-            if (count($errors) > 0) {
+            if (\count($errors) > 0) {
                 return $this->json(
                     ['error' => 'Validation failed', 'violations' => $this->formatErrors($errors)],
                     Response::HTTP_BAD_REQUEST
@@ -145,7 +145,7 @@ class TipController extends AbstractController
 
             return $this->json([
                 'message' => 'Tip updated successfully',
-                'tip'     => $this->serializeTip($updatedTip),
+                'tip' => $this->serializeTip($updatedTip),
             ]);
         } catch (\Exception $e) {
             return $this->json(
@@ -164,7 +164,7 @@ class TipController extends AbstractController
     {
         $tip = $this->tipService->getTipById($id);
 
-        if ($tip === null) {
+        if (null === $tip) {
             return $this->json(['error' => 'Tip not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -189,15 +189,15 @@ class TipController extends AbstractController
     private function serializeTip(Tip $tip): array
     {
         return [
-            'id'               => $tip->getId(),
-            'title'            => $tip->getTitle(),
-            'author'           => $tip->getAuthor(),
-            'authorTitle'      => $tip->getAuthorTitle(),
+            'id' => $tip->getId(),
+            'title' => $tip->getTitle(),
+            'author' => $tip->getAuthor(),
+            'authorTitle' => $tip->getAuthorTitle(),
             'shortDescription' => $tip->getShortDescription(),
-            'description'      => $tip->getDescription(),
-            'imageSrc'         => $tip->getImageSrc(),
-            'tags'             => $tip->getTags(),
-            'createdAt'        => $tip->getCreatedAt()?->format('Y-m-d H:i:s'),
+            'description' => $tip->getDescription(),
+            'imageSrc' => $tip->getImageSrc(),
+            'tags' => $tip->getTags(),
+            'createdAt' => $tip->getCreatedAt()?->format('Y-m-d H:i:s'),
         ];
     }
 
@@ -211,6 +211,7 @@ class TipController extends AbstractController
         foreach ($errors as $error) {
             $formatted[$error->getPropertyPath()] = $error->getMessage();
         }
+
         return $formatted;
     }
 }

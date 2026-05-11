@@ -16,9 +16,9 @@ class BudgetCategory
     private ?int $id = null;
 
     #[ORM\ManyToOne(
-        targetEntity: Budget::class, 
-        inversedBy: 'budgetCategories')
-    ]
+        targetEntity: Budget::class,
+        inversedBy: 'budgetCategories'
+    )]
     #[ORM\JoinColumn(nullable: false)]
     private ?Budget $budget = null;
 

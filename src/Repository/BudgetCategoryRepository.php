@@ -41,9 +41,9 @@ class BudgetCategoryRepository extends ServiceEntityRepository
      */
     public function getPreviousBudgetAmounts(BudgetCategory $budgetCategory, int $limit = 3): array
     {
-        $category      = $budgetCategory->getCategory();
+        $category = $budgetCategory->getCategory();
         $currentBudget = $budgetCategory->getBudget();
-        $user          = $currentBudget->getUser();
+        $user = $currentBudget->getUser();
 
         $rows = $this->createQueryBuilder('bc')
             ->select('bc.amount')

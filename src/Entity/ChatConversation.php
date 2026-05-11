@@ -31,11 +31,11 @@ class ChatConversation
     private \DateTimeInterface $updatedAt;
 
     #[ORM\OneToMany(
-        targetEntity: ChatMessage::class, 
-        mappedBy: 'conversation', 
-        cascade: ['persist', 'remove'], 
+        targetEntity: ChatMessage::class,
+        mappedBy: 'conversation',
+        cascade: ['persist', 'remove'],
         orphanRemoval: true
-        )]
+    )]
     #[ORM\OrderBy(['createdAt' => 'ASC'])]
     private Collection $messages;
 
@@ -59,6 +59,7 @@ class ChatConversation
     public function setUser(?User $user): static
     {
         $this->user = $user;
+
         return $this;
     }
 
@@ -70,6 +71,7 @@ class ChatConversation
     public function setTitle(?string $title): static
     {
         $this->title = $title;
+
         return $this;
     }
 
@@ -86,6 +88,7 @@ class ChatConversation
     public function setUpdatedAt(\DateTimeInterface $updatedAt): static
     {
         $this->updatedAt = $updatedAt;
+
         return $this;
     }
 

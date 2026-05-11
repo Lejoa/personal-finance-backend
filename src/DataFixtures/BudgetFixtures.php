@@ -28,12 +28,12 @@ class BudgetFixtures extends Fixture implements DependentFixtureInterface
      * budget health panel shows a realistic mix of over- and under-budget categories.
      */
     private const CATEGORY_LIMITS = [
-        'Alimentos'       => 800000,
-        'Transporte'      => 400000,
+        'Alimentos' => 800000,
+        'Transporte' => 400000,
         'Entretenimiento' => 300000,
-        'Salud'           => 250000,
-        'Educación'       => 200000,
-        'Otros'           => 150000,
+        'Salud' => 250000,
+        'Educación' => 200000,
+        'Otros' => 150000,
     ];
 
     /**
@@ -48,9 +48,7 @@ class BudgetFixtures extends Fixture implements DependentFixtureInterface
         $user = $manager->getRepository(User::class)->findOneBy(['email' => self::USER_EMAIL]);
 
         if (!$user) {
-            throw new \RuntimeException(
-                'Usuario "' . self::USER_EMAIL . '" no encontrado. Haz login con Google primero y luego ejecuta los fixtures.'
-            );
+            throw new \RuntimeException('Usuario "' . self::USER_EMAIL . '" no encontrado. Haz login con Google primero y luego ejecuta los fixtures.');
         }
 
         // Build a name-indexed map of expense categories for fast lookup.
@@ -62,10 +60,10 @@ class BudgetFixtures extends Fixture implements DependentFixtureInterface
 
         // Generate one budget per month: 5 months back up to the current month.
         $now = new \DateTime();
-        for ($monthsBack = 5; $monthsBack >= 0; $monthsBack--) {
+        for ($monthsBack = 5; $monthsBack >= 0; --$monthsBack) {
             $ref = (clone $now)->modify("-{$monthsBack} months");
             $startDate = new \DateTime($ref->format('Y-m-01'));
-            $endDate   = new \DateTime($ref->format('Y-m-t'));
+            $endDate = new \DateTime($ref->format('Y-m-t'));
 
             $budget = new Budget();
             $budget->setUser($user);

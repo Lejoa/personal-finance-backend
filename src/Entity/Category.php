@@ -61,6 +61,7 @@ class Category
     public function setName(string $name): static
     {
         $this->name = $name;
+
         return $this;
     }
 
@@ -72,6 +73,7 @@ class Category
     public function setDescription(string $description): static
     {
         $this->description = $description;
+
         return $this;
     }
 
@@ -83,6 +85,7 @@ class Category
     public function setType(string $type): static
     {
         $this->type = $type;
+
         return $this;
     }
 
@@ -94,6 +97,7 @@ class Category
     public function setCreatedAt(\DateTimeInterface $createdAt): static
     {
         $this->createdAt = $createdAt;
+
         return $this;
     }
 }

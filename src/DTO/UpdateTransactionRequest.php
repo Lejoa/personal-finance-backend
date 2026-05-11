@@ -57,11 +57,23 @@ class UpdateTransactionRequest
      */
     public function applyTo(Transaction $transaction): void
     {
-        if ($this->name !== null)         { $transaction->setName($this->name); }
-        if ($this->type !== null)         { $transaction->setType($this->type); }
-        if ($this->amount !== null)       { $transaction->setAmount($this->amount); }
-        if ($this->date !== null)         { $transaction->setDate(new \DateTime($this->date)); }
-        if ($this->note !== null)         { $transaction->setNote($this->note); }
-        if ($this->synchronized !== null) { $transaction->setSynchronized($this->synchronized); }
+        if (null !== $this->name) {
+            $transaction->setName($this->name);
+        }
+        if (null !== $this->type) {
+            $transaction->setType($this->type);
+        }
+        if (null !== $this->amount) {
+            $transaction->setAmount($this->amount);
+        }
+        if (null !== $this->date) {
+            $transaction->setDate(new \DateTime($this->date));
+        }
+        if (null !== $this->note) {
+            $transaction->setNote($this->note);
+        }
+        if (null !== $this->synchronized) {
+            $transaction->setSynchronized($this->synchronized);
+        }
     }
 }

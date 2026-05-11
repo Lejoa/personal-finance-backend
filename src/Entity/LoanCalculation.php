@@ -54,38 +54,140 @@ class LoanCalculation
         $this->createdAt = new \DateTime();
     }
 
-    public function getId(): ?int { return $this->id; }
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
 
-    public function getUser(): ?User { return $this->user; }
-    public function setUser(?User $user): static { $this->user = $user; return $this; }
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
 
-    public function getName(): string { return $this->name; }
-    public function setName(string $name): static { $this->name = $name; return $this; }
+    public function setUser(?User $user): static
+    {
+        $this->user = $user;
 
-    public function getAmount(): float { return $this->amount; }
-    public function setAmount(float $amount): static { $this->amount = $amount; return $this; }
+        return $this;
+    }
 
-    public function getAnnualRate(): float { return $this->annualRate; }
-    public function setAnnualRate(float $annualRate): static { $this->annualRate = $annualRate; return $this; }
+    public function getName(): string
+    {
+        return $this->name;
+    }
 
-    public function getTermMonths(): int { return $this->termMonths; }
-    public function setTermMonths(int $termMonths): static { $this->termMonths = $termMonths; return $this; }
+    public function setName(string $name): static
+    {
+        $this->name = $name;
 
-    public function getExtraPayment(): float { return $this->extraPayment; }
-    public function setExtraPayment(float $extraPayment): static { $this->extraPayment = $extraPayment; return $this; }
+        return $this;
+    }
 
-    public function getFrequency(): string { return $this->frequency; }
-    public function setFrequency(string $frequency): static { $this->frequency = $frequency; return $this; }
+    public function getAmount(): float
+    {
+        return $this->amount;
+    }
 
-    public function getPeriodicPayment(): float { return $this->periodicPayment; }
-    public function setPeriodicPayment(float $periodicPayment): static { $this->periodicPayment = $periodicPayment; return $this; }
+    public function setAmount(float $amount): static
+    {
+        $this->amount = $amount;
 
-    public function getTotalInterest(): float { return $this->totalInterest; }
-    public function setTotalInterest(float $totalInterest): static { $this->totalInterest = $totalInterest; return $this; }
+        return $this;
+    }
 
-    public function getTotalPaid(): float { return $this->totalPaid; }
-    public function setTotalPaid(float $totalPaid): static { $this->totalPaid = $totalPaid; return $this; }
+    public function getAnnualRate(): float
+    {
+        return $this->annualRate;
+    }
 
-    public function getCreatedAt(): ?\DateTimeInterface { return $this->createdAt; }
-    public function setCreatedAt(\DateTimeInterface $createdAt): static { $this->createdAt = $createdAt; return $this; }
+    public function setAnnualRate(float $annualRate): static
+    {
+        $this->annualRate = $annualRate;
+
+        return $this;
+    }
+
+    public function getTermMonths(): int
+    {
+        return $this->termMonths;
+    }
+
+    public function setTermMonths(int $termMonths): static
+    {
+        $this->termMonths = $termMonths;
+
+        return $this;
+    }
+
+    public function getExtraPayment(): float
+    {
+        return $this->extraPayment;
+    }
+
+    public function setExtraPayment(float $extraPayment): static
+    {
+        $this->extraPayment = $extraPayment;
+
+        return $this;
+    }
+
+    public function getFrequency(): string
+    {
+        return $this->frequency;
+    }
+
+    public function setFrequency(string $frequency): static
+    {
+        $this->frequency = $frequency;
+
+        return $this;
+    }
+
+    public function getPeriodicPayment(): float
+    {
+        return $this->periodicPayment;
+    }
+
+    public function setPeriodicPayment(float $periodicPayment): static
+    {
+        $this->periodicPayment = $periodicPayment;
+
+        return $this;
+    }
+
+    public function getTotalInterest(): float
+    {
+        return $this->totalInterest;
+    }
+
+    public function setTotalInterest(float $totalInterest): static
+    {
+        $this->totalInterest = $totalInterest;
+
+        return $this;
+    }
+
+    public function getTotalPaid(): float
+    {
+        return $this->totalPaid;
+    }
+
+    public function setTotalPaid(float $totalPaid): static
+    {
+        $this->totalPaid = $totalPaid;
+
+        return $this;
+    }
+
+    public function getCreatedAt(): ?\DateTimeInterface
+    {
+        return $this->createdAt;
+    }
+
+    public function setCreatedAt(\DateTimeInterface $createdAt): static
+    {
+        $this->createdAt = $createdAt;
+
+        return $this;
+    }
 }

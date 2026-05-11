@@ -31,11 +31,11 @@ class Budget
      * @var Collection<int, BudgetCategory>
      */
     #[ORM\OneToMany(
-        targetEntity: BudgetCategory::class, 
-        mappedBy: 'budget', 
-        cascade: ['persist', 'remove'], 
-        orphanRemoval: true)
-    ]
+        targetEntity: BudgetCategory::class,
+        mappedBy: 'budget',
+        cascade: ['persist', 'remove'],
+        orphanRemoval: true
+    )]
     private Collection $budgetCategories;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]

@@ -30,13 +30,13 @@ class NotificationController extends AbstractController
     public function unread(): JsonResponse
     {
         /** @var User $user */
-        $user          = $this->getUser();
+        $user = $this->getUser();
         $notifications = $this->notificationService->getUnread($user);
 
         return $this->json([
-            'count'         => count($notifications),
+            'count' => \count($notifications),
             'notifications' => array_map(
-                fn(Notification $n) => $this->serializeNotification($n),
+                fn (Notification $n) => $this->serializeNotification($n),
                 $notifications
             ),
         ]);
@@ -65,10 +65,10 @@ class NotificationController extends AbstractController
     private function serializeNotification(Notification $notification): array
     {
         return [
-            'id'          => $notification->getId(),
-            'message'     => $notification->getMessage(),
+            'id' => $notification->getId(),
+            'message' => $notification->getMessage(),
             'referenceId' => $notification->getReferenceId(),
-            'createdAt'   => $notification->getCreatedAt()?->format('Y-m-d H:i:s'),
+            'createdAt' => $notification->getCreatedAt()?->format('Y-m-d H:i:s'),
         ];
     }
 }

@@ -2,284 +2,160 @@
 
 namespace App\Controller;
 
-use App\Entity\RefreshToken;
 use App\Entity\User;
-use App\Repository\RefreshTokenRepository;
-use App\Repository\UserRepository;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Service\AuthService;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
 final class AuthController extends AbstractController
 {
     /**
-     * Inicia el flujo de autenticación con Google OAuth
-     * Redirige al usuario a la página de login de Google
+     * Injects only AuthService — all OAuth, JWT, and token logic lives there.
+     */
+    public function __construct(
+        private readonly AuthService $authService
+    ) {
+    }
+
+    /**
+     * Start the Google OAuth flow by redirecting the user to the Google consent screen.
+     *
+     * When the request comes from an Android client (Chrome Custom Tab), the query
+     * parameter ?client=android is stored in the session so the callback can issue a
+     * deep-link redirect instead of a web URL. The session is used instead of the OAuth
+     * "state" parameter because KnpU reserves "state" for its own CSRF protection.
      */
     #[Route('/auth/google', name: 'auth_google')]
     public function googleConnect(Request $request, ClientRegistry $clientRegistry): RedirectResponse
     {
-        // Si el cliente es Android, guardarlo en la sesión antes de redirigir a Google.
-        // No se puede usar el campo "state" porque knpu lo usa internamente para CSRF.
-        // La sesión persiste entre la request /auth/google y el callback /auth/google/callback
-        // ya que ambas requests vienen del mismo browser (Chrome Custom Tab del celular).
-        if ($request->query->get('client') === 'android') {
+        if ('android' === $request->query->get('client')) {
             $request->getSession()->set('oauth_client', 'android');
         }
 
         return $clientRegistry
             ->getClient('google')
-            ->redirect(
-                ['openid', 'email', 'profile'], // Scopes solicitados
-                []
-            );
+            ->redirect(['openid', 'email', 'profile'], []);
     }
 
     /**
-     * Callback de Google OAuth
-     * Procesa la respuesta de Google, crea/actualiza el usuario y genera JWT
+     * Handle the Google OAuth callback, resolve the local user, and issue JWT + refresh token.
+     *
+     * On success the user is redirected to the frontend with both tokens in the query string.
+     * Android clients receive a deep-link URL (personalfinance://...) so the native app can
+     * intercept the redirect via a Chrome Custom Tab intent filter. On any OAuth error the
+     * user is redirected to the login page with an error description.
      */
     #[Route('/auth/google/callback', name: 'auth_google_callback')]
-    public function googleCallback(
-        Request $request,
-        ClientRegistry $clientRegistry,
-        UserRepository $userRepository,
-        EntityManagerInterface $entityManager,
-        JWTTokenManagerInterface $jwtManager
-    ): RedirectResponse {
-        // Obtener URL del frontend desde variables de entorno
+    public function googleCallback(Request $request, ClientRegistry $clientRegistry): RedirectResponse
+    {
         $frontendUrl = $_ENV['FRONTEND_URL'] ?? 'http://localhost:3000';
 
         try {
-            // 1. Obtener el cliente OAuth de Google
-            $client = $clientRegistry->getClient('google');
+            $result = $this->authService->handleGoogleCallback($clientRegistry);
 
-            // 2. Obtener el access token desde Google
-            $accessToken = $client->getAccessToken();
-
-            // 3. Obtener datos del usuario desde Google usando el access token
-            /** @var \League\OAuth2\Client\Provider\GoogleUser $googleUser */
-            $googleUser = $client->fetchUserFromToken($accessToken);
-
-            // 4. Extraer información del usuario de Google
-            $googleId = $googleUser->getId();
-            $email = $googleUser->getEmail();
-            $name = $googleUser->getName();
-            $avatar = $googleUser->getAvatar();
-
-            // 5. Buscar si el usuario ya existe en nuestra base de datos
-            $user = $userRepository->findOneBy(['googleId' => $googleId]);
-
-            if (!$user) {
-                // 6. Si no existe, verificar si existe un usuario con el mismo email
-                $existingUser = $userRepository->findOneBy(['email' => $email]);
-
-                if ($existingUser) {
-                    // Si existe un usuario con el mismo email, vincular la cuenta de Google
-                    $user = $existingUser;
-                    $user->setGoogleId($googleId);
-                    $user->setAvatar($avatar);
-                } else {
-                    // Si no existe, crear nuevo usuario
-                    $user = new User();
-                    $user->setEmail($email);
-                    $user->setGoogleId($googleId);
-                    $user->setName($name);
-                    $user->setAvatar($avatar);
-                }
-
-                $entityManager->persist($user);
-                $entityManager->flush();
-            } else {
-                // Si el usuario ya existe, actualizar su avatar por si cambió
-                if ($user->getAvatar() !== $avatar) {
-                    $user->setAvatar($avatar);
-                    $entityManager->flush();
-                }
-            }
-
-            // 7. Generar JWT (access token )propio para el usuario
-            $accessToken = $jwtManager->create($user);
-            $refreshToken = $this->generateRefreshToken(
-                $user, 
-                $entityManager
-            );
-
-            // 8. Redirigir al frontend con ambos tokens en la URL.
-            // Si el client es Android (custon URL scheme), redirigir a personalfinance://
-            // para que Android intercepte la URL y la enrute de cuelta a la app nativa.
-            // El parámetro ?client=android es enviado por AuthService.loginWithGoogleNative()
-            
-            // Recuperar el indicador de cliente Android desde la sesión.
-            // Chrome Custom Tab comparte la sesión con la request inicial /auth/google,
-            // por lo que el valor guardado en sesión está disponible en el callback.
-            $isAndroidClient = $request->getSession()->get('oauth_client') === 'android';
+            $isAndroidClient = 'android' === $request->getSession()->get('oauth_client');
             $request->getSession()->remove('oauth_client');
+
             $callbackBase = $isAndroidClient
                 ? ($_ENV['FRONTEND_URL_ANDROID'] ?? 'personalfinance://auth/callback')
                 : "$frontendUrl/auth/callback";
-                
-            return new RedirectResponse("$callbackBase?token=$accessToken&refreshToken=$refreshToken");
 
+            return new RedirectResponse(
+                "$callbackBase?token={$result['accessToken']}&refreshToken={$result['refreshToken']}"
+            );
         } catch (\Exception $e) {
-            // En caso de error, redirigir al frontend con mensaje de error
-            return new RedirectResponse("$frontendUrl/login?error=oauth_failed&message=" . urlencode($e->getMessage()));
+            return new RedirectResponse(
+                "$frontendUrl/login?error=oauth_failed&message=" . urlencode($e->getMessage())
+            );
         }
     }
 
     /**
-     * Endpoint para obtener información del usuario autenticado
-     * Requiere JWT válido en el header Authorization
+     * Return the authenticated user's profile.
+     *
+     * Requires a valid JWT in the Authorization header. Returns 401 when the
+     * request is unauthenticated or the resolved principal is not a User entity.
      */
     #[Route('/api/me', name: 'api_me', methods: ['GET'])]
     public function me(): JsonResponse
     {
-        // Obtener usuario autenticado desde el token JWT
         $user = $this->getUser();
 
-        // Verificar que el usuario esté autenticado
         if (!$user instanceof User) {
-            return $this->json([
-                'error' => 'Not authenticated',
-                'message' => 'You must be logged in to access this endpoint'
-            ], 401);
+            return $this->json(
+                ['error' => 'Not authenticated', 'message' => 'You must be logged in to access this endpoint'],
+                Response::HTTP_UNAUTHORIZED
+            );
         }
 
-        // Retornar información del usuario
         return $this->json([
             'id' => $user->getId(),
             'email' => $user->getEmail(),
             'name' => $user->getName(),
             'avatar' => $user->getAvatar(),
             'roles' => $user->getRoles(),
-            'createdAt' => $user->getCreatedAt()->format('Y-m-d H:i:s')
+            'createdAt' => $user->getCreatedAt()->format('Y-m-d H:i:s'),
         ]);
     }
 
     /**
-     * Endpoint para renovar el access token usando un refresh token
-     * Permite al cliente obtener un nuevo JWT sin re-autenticarse
+     * Exchange a valid refresh token for a new JWT and a rotated refresh token.
+     *
+     * Rotation invalidates the previous refresh token immediately, so each refresh
+     * token can only be used once. Returns 400 when the body is missing the token,
+     * and 401 when the token is not found, expired, or already revoked.
      */
     #[Route('/api/token/refresh', name: 'api_token_refresh', methods: ['POST'])]
-    public function refreshToken(
-        Request $request,
-        RefreshTokenRepository $refreshTokenRepository,
-        JWTTokenManagerInterface $jwtManager,
-        EntityManagerInterface $entityManager
-    ): JsonResponse {
+    public function refreshToken(Request $request): JsonResponse
+    {
+        $body = json_decode($request->getContent(), true);
+        $tokenString = $body['refreshToken'] ?? null;
 
-        //Obtener refresh token del body de la petición
-        $datas = json_decode($request->getContent(), true);
-        $refreshTokenString = $datas['refreshToken'] ?? null;
-
-        if (!$refreshTokenString) {
-            return $this->json([
-                'error' => 'Missing refresh token',
-                'message' => 'Refresh token is required'
-            ], 400);
+        if (!$tokenString) {
+            return $this->json(
+                ['error' => 'Missing refresh token', 'message' => 'refreshToken is required in the request body'],
+                Response::HTTP_BAD_REQUEST
+            );
         }
 
-        // Buscar el refresh token en la base de datos
-        $refreshToken = $refreshTokenRepository->findValidToken($refreshTokenString);
+        $tokens = $this->authService->refreshAccessToken($tokenString);
 
-        if(!$refreshToken) {
-            return $this->json([
-                'error' => 'Invalid refresh token',
-                'message' => 'The provided refresh token is invalid or expired'
-            ], 401);
+        if (!$tokens) {
+            return $this->json(
+                ['error' => 'Invalid refresh token', 'message' => 'The provided refresh token is invalid or expired'],
+                Response::HTTP_UNAUTHORIZED
+            );
         }
 
-        // Obtener usuario asociado al refresh token
-        $user = $refreshToken->getUser();
-
-        // Generar nuevo acces token 
-        $newAccessToken = $jwtManager->create($user);
-
-        // Opcional: Generar nuevo refresh token (rotación de refresh tokens)
-        // Esto es más seguro pero requiere que el cliente maneje el nuevo refresh token
-        $newRefreshToken = $this->generateRefreshToken($user, $entityManager);
-
-        // Revocar el refresh token anterior (rotación)
-        $refreshToken->setIsRevoked(true);
-        $entityManager->flush();
-
-        // Retornar nuevos tokens
         return $this->json([
-            'accessToken' => $newAccessToken,
-            'refreshToken' => $newRefreshToken,
+            'accessToken' => $tokens['accessToken'],
+            'refreshToken' => $tokens['refreshToken'],
             'tokenType' => 'bearer',
-            'expiresIn' => 3600 // 1 hora
+            'expiresIn' => 3600,
         ]);
     }
 
     /**
-     * Endpoint para hacer logout y revocar el refresh token
+     * Revoke the provided refresh token and invalidate all active sessions for the user.
+     *
+     * The refreshToken field in the body is optional — even if absent, all server-side
+     * sessions for the authenticated user are revoked. Always returns 200 so the client
+     * can treat the logout as idempotent regardless of token validity.
      */
     #[Route('/api/auth/logout', name: 'api_auth_logout', methods: ['POST'])]
-    public function logout(
-        Request $request,
-        RefreshTokenRepository $refreshTokenRepository,
-        EntityManagerInterface $entityManager
-    ): JsonResponse {
-        // Obtener refresh token del body de la petición
-        $data = json_decode($request->getContent(), true);
-        $refreshTokenString = $data['refreshToken'] ?? null;
+    public function logout(Request $request): JsonResponse
+    {
+        $body = json_decode($request->getContent(), true);
+        $tokenString = $body['refreshToken'] ?? null;
 
-        if ($refreshTokenString) {
-            // Buscar y revocar el refresh token
-            $refreshToken = $refreshTokenRepository->findValidToken($refreshTokenString);
-
-            if ($refreshToken) {
-                $refreshToken->setIsRevoked(true);
-                $entityManager->flush();
-            }
-        }
-
-        // También podemos revocar todos los tokens del usuario autenticado
         $user = $this->getUser();
-        if ($user instanceof User) {
-            $refreshTokenRepository->revokeAllUserTokens($user);
-        }
+        $this->authService->logout($tokenString, $user instanceof User ? $user : null);
 
-        // Retornar respuesta exitosa
-        return $this->json([
-            'message' => 'Successfully logged out'
-        ]);
+        return $this->json(['message' => 'Successfully logged out']);
     }
-
-    /**
-     * Generar un nuevo refresh token para un usuario
-     * 
-     * @param User $user Usuario para el cual generar el refresh token
-     * @param EntityManagerInterface $entityManager Entity manager para persistir el token
-     * @return string El refresh token generado
-     */
-    private function generateRefreshToken(
-        User $user,
-        EntityManagerInterface $entityManager): string {
-
-            // Generar token aleatorio seguro
-            $tokenString = bin2hex(random_bytes(64));
-
-            // Crear entidad RefreshToken
-            $refreshToken = new RefreshToken();
-            $refreshToken->setUser($user);
-            $refreshToken->setToken($tokenString);
-
-            // Establecer fecha de expiración (ej. 30 días desde ahora)
-            $expiresAt = new \DateTime();
-            $expiresAt->modify('+30 days');
-            $refreshToken->setExpiresAt($expiresAt);
-
-            // Persistir en la base de datos
-            $entityManager->persist($refreshToken);
-            $entityManager->flush();
-
-            return $tokenString;
-        }
 }

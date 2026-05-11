@@ -37,33 +37,35 @@ class GenerateMonthlyAnalysisCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io         = new SymfonyStyle($input, $output);
+        $io = new SymfonyStyle($input, $output);
         $checkpoint = $input->getOption('checkpoint');
 
-        if (!in_array($checkpoint, ['mid', 'end'], true)) {
+        if (!\in_array($checkpoint, ['mid', 'end'], true)) {
             $io->error('Invalid checkpoint. Use "mid" or "end".');
+
             return Command::FAILURE;
         }
 
         $users = $this->userRepository->findAll();
-        $io->info(sprintf('Generating %s-month analyses for %d users...', $checkpoint, count($users)));
+        $io->info(\sprintf('Generating %s-month analyses for %d users...', $checkpoint, \count($users)));
 
         $generated = 0;
-        $skipped   = 0;
+        $skipped = 0;
 
         foreach ($users as $user) {
             $analysis = $this->analysisService->generateForUser($user, $checkpoint);
 
             if ($analysis) {
-                $generated++;
-                $io->writeln(sprintf('  ✓ User %s — analysis generated (id: %d)', $user->getEmail(), $analysis->getId()));
+                ++$generated;
+                $io->writeln(\sprintf('  ✓ User %s — analysis generated (id: %d)', $user->getEmail(), $analysis->getId()));
             } else {
-                $skipped++;
-                $io->writeln(sprintf('  - User %s — skipped (already exists or LLM error)', $user->getEmail()));
+                ++$skipped;
+                $io->writeln(\sprintf('  - User %s — skipped (already exists or LLM error)', $user->getEmail()));
             }
         }
 
-        $io->success(sprintf('Done. Generated: %d, Skipped: %d', $generated, $skipped));
+        $io->success(\sprintf('Done. Generated: %d, Skipped: %d', $generated, $skipped));
+
         return Command::SUCCESS;
     }
 }

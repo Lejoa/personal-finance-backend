@@ -37,8 +37,8 @@ class LoanCalculationController extends AbstractController
         $calculations = $this->loanService->getByUser($user);
 
         return $this->json([
-            'data'  => array_map(fn(LoanCalculation $c) => $this->serialize($c), $calculations),
-            'total' => count($calculations),
+            'data' => array_map(fn (LoanCalculation $c) => $this->serialize($c), $calculations),
+            'total' => \count($calculations),
         ]);
     }
 
@@ -52,7 +52,7 @@ class LoanCalculationController extends AbstractController
             $dto = $this->serializer->deserialize($request->getContent(), CreateLoanCalculationRequest::class, 'json');
 
             $errors = $this->validator->validate($dto);
-            if (count($errors) > 0) {
+            if (\count($errors) > 0) {
                 return $this->json(
                     ['error' => 'Validation failed', 'violations' => $this->formatErrors($errors)],
                     Response::HTTP_BAD_REQUEST
@@ -81,6 +81,7 @@ class LoanCalculationController extends AbstractController
 
         try {
             $this->loanService->delete($id, $user);
+
             return $this->json(['message' => 'Cálculo eliminado correctamente.']);
         } catch (NotFoundHttpException $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_NOT_FOUND);
@@ -97,17 +98,17 @@ class LoanCalculationController extends AbstractController
     private function serialize(LoanCalculation $calc): array
     {
         return [
-            'id'              => $calc->getId(),
-            'name'            => $calc->getName(),
-            'amount'          => $calc->getAmount(),
-            'annualRate'      => $calc->getAnnualRate(),
-            'termMonths'      => $calc->getTermMonths(),
-            'extraPayment'    => $calc->getExtraPayment(),
-            'frequency'       => $calc->getFrequency(),
+            'id' => $calc->getId(),
+            'name' => $calc->getName(),
+            'amount' => $calc->getAmount(),
+            'annualRate' => $calc->getAnnualRate(),
+            'termMonths' => $calc->getTermMonths(),
+            'extraPayment' => $calc->getExtraPayment(),
+            'frequency' => $calc->getFrequency(),
             'periodicPayment' => $calc->getPeriodicPayment(),
-            'totalInterest'   => $calc->getTotalInterest(),
-            'totalPaid'       => $calc->getTotalPaid(),
-            'createdAt'       => $calc->getCreatedAt()?->format('Y-m-d H:i:s'),
+            'totalInterest' => $calc->getTotalInterest(),
+            'totalPaid' => $calc->getTotalPaid(),
+            'createdAt' => $calc->getCreatedAt()?->format('Y-m-d H:i:s'),
         ];
     }
 
@@ -117,6 +118,7 @@ class LoanCalculationController extends AbstractController
         foreach ($errors as $error) {
             $formatted[$error->getPropertyPath()] = $error->getMessage();
         }
+
         return $formatted;
     }
 }

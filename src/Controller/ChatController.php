@@ -46,7 +46,7 @@ class ChatController extends AbstractController
             $dto = $this->serializer->deserialize($request->getContent(), ChatRequestDTO::class, 'json');
 
             $errors = $this->validator->validate($dto);
-            if (count($errors) > 0) {
+            if (\count($errors) > 0) {
                 return $this->json(
                     ['error' => 'Validation failed', 'violations' => $this->formatErrors($errors)],
                     Response::HTTP_BAD_REQUEST
@@ -56,20 +56,21 @@ class ChatController extends AbstractController
             $response = $this->chatService->processMessage($dto, $user);
 
             return $this->json([
-                'id'             => $response->id,
-                'message'        => $response->message,
-                'role'           => $response->role,
-                'timestamp'      => $response->timestamp,
+                'id' => $response->id,
+                'message' => $response->message,
+                'role' => $response->role,
+                'timestamp' => $response->timestamp,
                 'conversationId' => $response->conversationId,
-                'metadata'       => $response->metadata,
+                'metadata' => $response->metadata,
             ]);
         } catch (\RuntimeException $e) {
-            if ($e->getCode() === 422) {
+            if (422 === $e->getCode()) {
                 return $this->json(
                     ['error' => 'message_rejected', 'message' => $e->getMessage()],
                     Response::HTTP_UNPROCESSABLE_ENTITY
                 );
             }
+
             return $this->json(
                 ['error' => 'Error processing message', 'message' => $e->getMessage()],
                 Response::HTTP_INTERNAL_SERVER_ERROR
@@ -95,8 +96,8 @@ class ChatController extends AbstractController
         $conversations = $this->chatService->getUserConversations($user);
 
         return $this->json([
-            'data'  => array_map(fn(ChatConversation $conv) => $this->serializeConversation($conv), $conversations),
-            'total' => count($conversations),
+            'data' => array_map(fn (ChatConversation $conv) => $this->serializeConversation($conv), $conversations),
+            'total' => \count($conversations),
         ]);
     }
 
@@ -108,17 +109,17 @@ class ChatController extends AbstractController
     public function getConversation(int $id): JsonResponse
     {
         /** @var User $user */
-        $user         = $this->getUser();
+        $user = $this->getUser();
         $conversation = $this->chatService->getConversation($id, $user);
 
-        if ($conversation === null) {
+        if (null === $conversation) {
             return $this->json(['error' => 'Conversation not found'], Response::HTTP_NOT_FOUND);
         }
 
         return $this->json([
             'conversation' => $this->serializeConversation($conversation),
-            'messages'     => array_map(
-                fn(ChatMessage $msg) => $this->serializeMessage($msg),
+            'messages' => array_map(
+                fn (ChatMessage $msg) => $this->serializeMessage($msg),
                 $conversation->getMessages()->toArray()
             ),
         ]);
@@ -132,10 +133,10 @@ class ChatController extends AbstractController
     public function deleteConversation(int $id): JsonResponse
     {
         /** @var User $user */
-        $user         = $this->getUser();
+        $user = $this->getUser();
         $conversation = $this->chatService->getConversation($id, $user);
 
-        if ($conversation === null) {
+        if (null === $conversation) {
             return $this->json(['error' => 'Conversation not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -158,8 +159,8 @@ class ChatController extends AbstractController
     private function serializeConversation(ChatConversation $conversation): array
     {
         return [
-            'id'        => $conversation->getId(),
-            'title'     => $conversation->getTitle(),
+            'id' => $conversation->getId(),
+            'title' => $conversation->getTitle(),
             'createdAt' => $conversation->getCreatedAt()->format('c'),
             'updatedAt' => $conversation->getUpdatedAt()->format('c'),
         ];
@@ -172,10 +173,10 @@ class ChatController extends AbstractController
     private function serializeMessage(ChatMessage $message): array
     {
         return [
-            'id'        => $message->getId(),
-            'content'   => $message->getContent(),
-            'role'      => $message->getRole(),
-            'metadata'  => $message->getMetadata(),
+            'id' => $message->getId(),
+            'content' => $message->getContent(),
+            'role' => $message->getRole(),
+            'metadata' => $message->getMetadata(),
             'createdAt' => $message->getCreatedAt()->format('c'),
         ];
     }
@@ -190,6 +191,7 @@ class ChatController extends AbstractController
         foreach ($errors as $error) {
             $formatted[$error->getPropertyPath()] = $error->getMessage();
         }
+
         return $formatted;
     }
 }

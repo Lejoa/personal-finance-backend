@@ -43,7 +43,7 @@ class BudgetController extends AbstractController
             $dto = $this->serializer->deserialize($request->getContent(), CreateBudgetRequest::class, 'json');
 
             $errors = $this->validator->validate($dto);
-            if (count($errors) > 0) {
+            if (\count($errors) > 0) {
                 return $this->json(
                     ['error' => 'Validation failed', 'violations' => $this->formatErrors($errors)],
                     Response::HTTP_BAD_REQUEST
@@ -51,7 +51,7 @@ class BudgetController extends AbstractController
             }
 
             /** @var User $user */
-            $user   = $this->getUser();
+            $user = $this->getUser();
             $budget = $this->budgetService->createBudget($dto, $user);
 
             return $this->json($this->serializeBudget($budget), Response::HTTP_CREATED);
@@ -72,10 +72,10 @@ class BudgetController extends AbstractController
     public function list(): JsonResponse
     {
         /** @var User $user */
-        $user    = $this->getUser();
+        $user = $this->getUser();
         $budgets = $this->budgetService->getUserBudgets($user);
 
-        return $this->json(array_map(fn(Budget $b) => $this->serializeBudget($b), $budgets));
+        return $this->json(array_map(fn (Budget $b) => $this->serializeBudget($b), $budgets));
     }
 
     /**
@@ -86,10 +86,10 @@ class BudgetController extends AbstractController
     public function get(int $id): JsonResponse
     {
         /** @var User $user */
-        $user   = $this->getUser();
+        $user = $this->getUser();
         $budget = $this->budgetService->getUserBudgetById($id, $user);
 
-        if ($budget === null) {
+        if (null === $budget) {
             return $this->json(['error' => 'Budget not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -122,10 +122,10 @@ class BudgetController extends AbstractController
     public function delete(int $id): JsonResponse
     {
         /** @var User $user */
-        $user   = $this->getUser();
+        $user = $this->getUser();
         $budget = $this->budgetService->getUserBudgetById($id, $user);
 
-        if ($budget === null) {
+        if (null === $budget) {
             return $this->json(['error' => 'Budget not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -144,22 +144,22 @@ class BudgetController extends AbstractController
     public function updateCategory(int $budgetId, int $budgetCategoryId, Request $request): JsonResponse
     {
         /** @var User $user */
-        $user   = $this->getUser();
+        $user = $this->getUser();
         $budget = $this->budgetService->getUserBudgetById($budgetId, $user);
 
-        if ($budget === null) {
+        if (null === $budget) {
             return $this->json(['error' => 'Budget not found'], Response::HTTP_NOT_FOUND);
         }
 
         $budgetCategory = $this->budgetService->findCategoryInBudget($budgetCategoryId, $budgetId);
-        if ($budgetCategory === null) {
+        if (null === $budgetCategory) {
             return $this->json(['error' => 'Budget category not found'], Response::HTTP_NOT_FOUND);
         }
 
-        $body   = json_decode($request->getContent(), true) ?? [];
+        $body = json_decode($request->getContent(), true) ?? [];
         $amount = isset($body['amount']) ? (float) $body['amount'] : null;
 
-        if ($amount === null || $amount <= 0) {
+        if (null === $amount || $amount <= 0) {
             return $this->json(
                 ['error' => 'Field "amount" must be a positive number'],
                 Response::HTTP_BAD_REQUEST
@@ -169,10 +169,10 @@ class BudgetController extends AbstractController
         $updated = $this->budgetService->updateBudgetCategoryAmount($budgetCategory, $amount);
 
         return $this->json([
-            'id'           => $updated->getId(),
-            'categoryId'   => $updated->getCategory()->getId(),
+            'id' => $updated->getId(),
+            'categoryId' => $updated->getCategory()->getId(),
             'categoryName' => $updated->getCategory()->getName(),
-            'amount'       => $updated->getAmount(),
+            'amount' => $updated->getAmount(),
         ]);
     }
 
@@ -185,15 +185,15 @@ class BudgetController extends AbstractController
     public function deleteCategory(int $budgetId, int $budgetCategoryId): JsonResponse
     {
         /** @var User $user */
-        $user   = $this->getUser();
+        $user = $this->getUser();
         $budget = $this->budgetService->getUserBudgetById($budgetId, $user);
 
-        if ($budget === null) {
+        if (null === $budget) {
             return $this->json(['error' => 'Budget not found'], Response::HTTP_NOT_FOUND);
         }
 
         $budgetCategory = $this->budgetService->findCategoryInBudget($budgetCategoryId, $budgetId);
-        if ($budgetCategory === null) {
+        if (null === $budgetCategory) {
             return $this->json(['error' => 'Budget category not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -210,15 +210,15 @@ class BudgetController extends AbstractController
     public function categoryFeedback(int $budgetId, int $budgetCategoryId): JsonResponse
     {
         /** @var User $user */
-        $user   = $this->getUser();
+        $user = $this->getUser();
         $budget = $this->budgetService->getUserBudgetById($budgetId, $user);
 
-        if ($budget === null) {
+        if (null === $budget) {
             return $this->json(['error' => 'Budget not found'], Response::HTTP_NOT_FOUND);
         }
 
         $budgetCategory = $this->budgetService->findCategoryInBudget($budgetCategoryId, $budgetId);
-        if ($budgetCategory === null) {
+        if (null === $budgetCategory) {
             return $this->json(['error' => 'Budget category not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -236,17 +236,17 @@ class BudgetController extends AbstractController
     {
         try {
             /** @var User $user */
-            $user   = $this->getUser();
+            $user = $this->getUser();
             $budget = $this->budgetService->getUserBudgetById($id, $user);
 
-            if ($budget === null) {
+            if (null === $budget) {
                 return $this->json(['error' => 'Budget not found'], Response::HTTP_NOT_FOUND);
             }
 
             $dto = $this->serializer->deserialize($request->getContent(), UpdateBudgetRequest::class, 'json');
 
             $errors = $this->validator->validate($dto);
-            if (count($errors) > 0) {
+            if (\count($errors) > 0) {
                 return $this->json(
                     ['error' => 'Validation failed', 'violations' => $this->formatErrors($errors)],
                     Response::HTTP_BAD_REQUEST
@@ -276,20 +276,20 @@ class BudgetController extends AbstractController
         $categories = [];
         foreach ($budget->getBudgetCategories() as $bc) {
             $categories[] = [
-                'id'                  => $bc->getId(),
-                'categoryId'          => $bc->getCategory()->getId(),
-                'categoryName'        => $bc->getCategory()->getName(),
+                'id' => $bc->getId(),
+                'categoryId' => $bc->getCategory()->getId(),
+                'categoryName' => $bc->getCategory()->getName(),
                 'categoryDescription' => $bc->getCategory()->getDescription(),
-                'amount'              => $bc->getAmount(),
+                'amount' => $bc->getAmount(),
             ];
         }
 
         return [
-            'id'         => $budget->getId(),
-            'startDate'  => $budget->getStartDate()?->format('Y-m-d'),
-            'endDate'    => $budget->getEndDate()?->format('Y-m-d'),
+            'id' => $budget->getId(),
+            'startDate' => $budget->getStartDate()?->format('Y-m-d'),
+            'endDate' => $budget->getEndDate()?->format('Y-m-d'),
             'categories' => $categories,
-            'createdAt'  => $budget->getCreatedAt()?->format('Y-m-d H:i:s'),
+            'createdAt' => $budget->getCreatedAt()?->format('Y-m-d H:i:s'),
         ];
     }
 
@@ -303,6 +303,7 @@ class BudgetController extends AbstractController
         foreach ($errors as $error) {
             $formatted[$error->getPropertyPath()] = $error->getMessage();
         }
+
         return $formatted;
     }
 }

@@ -24,12 +24,12 @@ class DevAuthController extends AbstractController
     }
 
     /**
-     * Generate JWT token for development
+     * Generate JWT token for development.
      */
     #[Route('/token', name: 'api_dev_token', methods: ['POST'])]
     public function generateToken(Request $request): JsonResponse
     {
-        if ($this->getParameter('kernel.environment') !== 'dev') {
+        if ('dev' !== $this->getParameter('kernel.environment')) {
             return $this->json(
                 ['error' => 'This endpoint is only available in development environment'],
                 Response::HTTP_FORBIDDEN
@@ -44,7 +44,7 @@ class DevAuthController extends AbstractController
             );
 
             $errors = $this->validator->validate($dto);
-            if (count($errors) > 0) {
+            if (\count($errors) > 0) {
                 return $this->json(
                     ['error' => 'Validación fallida', 'violations' => $this->formatErrors($errors)],
                     Response::HTTP_BAD_REQUEST
@@ -63,13 +63,13 @@ class DevAuthController extends AbstractController
     }
 
     /**
-     * Get current user info for testing
+     * Get current user info for testing.
      */
     #[Route('/me', name: 'api_dev_me', methods: ['GET'])]
     #[IsGranted('ROLE_USER')]
     public function me(): JsonResponse
     {
-        if ($this->getParameter('kernel.environment') !== 'dev') {
+        if ('dev' !== $this->getParameter('kernel.environment')) {
             return $this->json(
                 ['error' => 'This endpoint is only available in development environment'],
                 Response::HTTP_FORBIDDEN
@@ -81,12 +81,12 @@ class DevAuthController extends AbstractController
         return $this->json([
             'id' => $user->getId(),
             'email' => $user->getEmail(),
-            'name' => $user->getName()
+            'name' => $user->getName(),
         ]);
     }
 
     /**
-     * Format validation errors
+     * Format validation errors.
      */
     private function formatErrors($errors): array
     {
@@ -94,6 +94,7 @@ class DevAuthController extends AbstractController
         foreach ($errors as $error) {
             $formatted[$error->getPropertyPath()] = $error->getMessage();
         }
+
         return $formatted;
     }
 }

@@ -42,7 +42,7 @@ class CategoryController extends AbstractController
             $dto = $this->serializer->deserialize($request->getContent(), CreateCategoryRequest::class, 'json');
 
             $errors = $this->validator->validate($dto);
-            if (count($errors) > 0) {
+            if (\count($errors) > 0) {
                 return $this->json(
                     ['error' => 'Validation failed', 'violations' => $this->formatErrors($errors)],
                     Response::HTTP_BAD_REQUEST
@@ -76,8 +76,8 @@ class CategoryController extends AbstractController
         $categories = $this->categoryService->getAllCategories($type, $name);
 
         return $this->json([
-            'data'  => array_map(fn(Category $c) => $this->serializeCategory($c), $categories),
-            'total' => count($categories),
+            'data' => array_map(fn (Category $c) => $this->serializeCategory($c), $categories),
+            'total' => \count($categories),
         ]);
     }
 
@@ -90,7 +90,7 @@ class CategoryController extends AbstractController
     {
         $category = $this->categoryService->getCategoryById($id);
 
-        if ($category === null) {
+        if (null === $category) {
             return $this->json(['error' => 'Category not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -106,7 +106,7 @@ class CategoryController extends AbstractController
     {
         $category = $this->categoryService->getCategoryById($id);
 
-        if ($category === null) {
+        if (null === $category) {
             return $this->json(['error' => 'Category not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -114,7 +114,7 @@ class CategoryController extends AbstractController
             $dto = $this->serializer->deserialize($request->getContent(), UpdateCategoryRequest::class, 'json');
 
             $errors = $this->validator->validate($dto);
-            if (count($errors) > 0) {
+            if (\count($errors) > 0) {
                 return $this->json(
                     ['error' => 'Validation failed', 'violations' => $this->formatErrors($errors)],
                     Response::HTTP_BAD_REQUEST
@@ -124,7 +124,7 @@ class CategoryController extends AbstractController
             $updatedCategory = $this->categoryService->updateCategory($category, $dto);
 
             return $this->json([
-                'message'  => 'Category updated successfully',
+                'message' => 'Category updated successfully',
                 'category' => $this->serializeCategory($updatedCategory),
             ]);
         } catch (\Exception $e) {
@@ -144,7 +144,7 @@ class CategoryController extends AbstractController
     {
         $category = $this->categoryService->getCategoryById($id);
 
-        if ($category === null) {
+        if (null === $category) {
             return $this->json(['error' => 'Category not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -171,11 +171,11 @@ class CategoryController extends AbstractController
     private function serializeCategory(Category $category): array
     {
         return [
-            'id'          => $category->getId(),
-            'name'        => $category->getName(),
+            'id' => $category->getId(),
+            'name' => $category->getName(),
             'description' => $category->getDescription(),
-            'type'        => $category->getType(),
-            'createdAt'   => $category->getCreatedAt()?->format('Y-m-d H:i:s'),
+            'type' => $category->getType(),
+            'createdAt' => $category->getCreatedAt()?->format('Y-m-d H:i:s'),
         ];
     }
 
@@ -189,6 +189,7 @@ class CategoryController extends AbstractController
         foreach ($errors as $error) {
             $formatted[$error->getPropertyPath()] = $error->getMessage();
         }
+
         return $formatted;
     }
 }

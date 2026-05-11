@@ -1,0 +1,31 @@
+parameters:
+    level: 5
+    paths:
+        - src
+    excludePaths:
+        - src/DataFixtures
+    symfony:
+        containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
+    doctrine:
+        repositoryClass: Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository
+    ignoreErrors:
+        # Symfony generates entities with nullable PHP types even when the DB column is NOT NULL.
+        # These mismatches are intentional and safe — Doctrine handles the mapping at runtime.
+        - identifier: doctrine.columnType
+        - identifier: doctrine.associationType
+
+        # getUser() returns UserInterface, but our app always injects the concrete User entity.
+        # Controllers call getId/getEmail/getName directly; this is the standard Symfony pattern.
+        - '#Call to an undefined method Symfony\\Component\\Security\\Core\\User\\UserInterface::(getId|getEmail|getName)\(\)#'
+
+        # ConstraintViolationListInterface implements __toString, but PHPStan does not infer it.
+        - '#Cannot cast Symfony\\Component\\Validator\\ConstraintViolationListInterface to string#'
+
+        # PHPStan cannot infer that $dayOfMonth (from format('j')) is always > 0.
+        - identifier: greater.alwaysTrue
+
+        # array_values on an already-list return value — no functional impact.
+        - identifier: arrayValues.list
+
+        # ?? on non-nullable left side — expression is always non-null by construction.
+        - identifier: nullCoalesce.expr

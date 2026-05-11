@@ -15,7 +15,7 @@ class CreateBudgetRequest
     public ?string $endDate = null;
 
     /**
-     * Array de objetos con estructura: [{"categoryId": 1, "amount": 100.50}, ...]
+     * Array de objetos con estructura: [{"categoryId": 1, "amount": 100.50}, ...].
      *
      * @var array<int, array{categoryId: int, amount: float}>
      */
@@ -30,17 +30,17 @@ class CreateBudgetRequest
             'fields' => [
                 'categoryId' => [
                     new Assert\NotBlank(message: 'El ID de categoría es obligatorio.'),
-                    new Assert\Type(type: 'integer', message: 'El ID de categoría debe ser un número entero.')
+                    new Assert\Type(type: 'integer', message: 'El ID de categoría debe ser un número entero.'),
                 ],
                 'amount' => [
                     new Assert\NotBlank(message: 'El monto es obligatorio.'),
                     new Assert\Type(type: 'numeric', message: 'El monto debe ser un número.'),
-                    new Assert\Positive(message: 'El monto debe ser mayor a 0.')
-                ]
+                    new Assert\Positive(message: 'El monto debe ser mayor a 0.'),
+                ],
             ],
             'allowExtraFields' => false,
-            'allowMissingFields' => false
-        ])
+            'allowMissingFields' => false,
+        ]),
     ])]
     public ?array $categories = null;
 }

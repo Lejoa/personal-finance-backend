@@ -67,5 +67,4 @@ class CreateTransactionRequest
         message: 'El origen debe ser "manual", "sms" o "chat".'
     )]
     public ?string $source = 'manual';
-
 }

@@ -51,6 +51,7 @@ class Notification
     public function setUser(?User $user): static
     {
         $this->user = $user;
+
         return $this;
     }
 
@@ -62,6 +63,7 @@ class Notification
     public function setType(string $type): static
     {
         $this->type = $type;
+
         return $this;
     }
 
@@ -73,6 +75,7 @@ class Notification
     public function setReferenceId(int $referenceId): static
     {
         $this->referenceId = $referenceId;
+
         return $this;
     }
 
@@ -84,6 +87,7 @@ class Notification
     public function setMessage(string $message): static
     {
         $this->message = $message;
+
         return $this;
     }
 
@@ -95,6 +99,7 @@ class Notification
     public function setIsRead(bool $isRead): static
     {
         $this->isRead = $isRead;
+
         return $this;
     }
 

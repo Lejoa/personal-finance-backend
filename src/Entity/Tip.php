@@ -89,6 +89,7 @@ class Tip
     public function setTitle(string $title): static
     {
         $this->title = $title;
+
         return $this;
     }
 
@@ -100,6 +101,7 @@ class Tip
     public function setAuthor(string $author): static
     {
         $this->author = $author;
+
         return $this;
     }
 
@@ -111,6 +113,7 @@ class Tip
     public function setDescription(string $description): static
     {
         $this->description = $description;
+
         return $this;
     }
 
@@ -122,6 +125,7 @@ class Tip
     public function setShortDescription(?string $shortDescription): static
     {
         $this->shortDescription = $shortDescription;
+
         return $this;
     }
 
@@ -133,6 +137,7 @@ class Tip
     public function setAuthorTitle(?string $authorTitle): static
     {
         $this->authorTitle = $authorTitle;
+
         return $this;
     }
 
@@ -144,6 +149,7 @@ class Tip
     public function setImageSrc(?string $imageSrc): static
     {
         $this->imageSrc = $imageSrc;
+
         return $this;
     }
 
@@ -155,6 +161,7 @@ class Tip
     public function setTags(?string $tags): static
     {
         $this->tags = $tags;
+
         return $this;
     }
 
@@ -166,6 +173,7 @@ class Tip
     public function setCreatedAt(\DateTimeInterface $createdAt): static
     {
         $this->createdAt = $createdAt;
+
         return $this;
     }
 }

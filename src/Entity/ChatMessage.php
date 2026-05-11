@@ -16,9 +16,9 @@ class ChatMessage
     private ?int $id = null;
 
     #[ORM\ManyToOne(
-        targetEntity: ChatConversation::class, 
+        targetEntity: ChatConversation::class,
         inversedBy: 'messages'
-        )]
+    )]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?ChatConversation $conversation = null;
 
@@ -52,6 +52,7 @@ class ChatMessage
     public function setConversation(?ChatConversation $conversation): static
     {
         $this->conversation = $conversation;
+
         return $this;
     }
 
@@ -63,6 +64,7 @@ class ChatMessage
     public function setContent(string $content): static
     {
         $this->content = $content;
+
         return $this;
     }
 
@@ -74,6 +76,7 @@ class ChatMessage
     public function setRole(string $role): static
     {
         $this->role = $role;
+
         return $this;
     }
 
@@ -85,6 +88,7 @@ class ChatMessage
     public function setMetadata(?array $metadata): static
     {
         $this->metadata = $metadata;
+
         return $this;
     }
 

@@ -18,7 +18,8 @@ class ChatConversationRepository extends ServiceEntityRepository
     }
 
     /**
-     * Find all conversations for a user, ordered by most recent
+     * Find all conversations for a user, ordered by most recent.
+     *
      * @return ChatConversation[]
      */
     public function findByUser(User $user, ?int $limit = null): array
@@ -28,7 +29,7 @@ class ChatConversationRepository extends ServiceEntityRepository
             ->setParameter('user', $user)
             ->orderBy('c.updatedAt', 'DESC');
 
-        if ($limit !== null) {
+        if (null !== $limit) {
             $qb->setMaxResults($limit);
         }
 
@@ -36,7 +37,7 @@ class ChatConversationRepository extends ServiceEntityRepository
     }
 
     /**
-     * Find a conversation by id and user (for authorization check)
+     * Find a conversation by id and user (for authorization check).
      */
     public function findOneByIdAndUser(int $id, User $user): ?ChatConversation
     {

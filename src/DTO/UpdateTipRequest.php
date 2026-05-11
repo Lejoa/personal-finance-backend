@@ -55,12 +55,26 @@ class UpdateTipRequest
      */
     public function applyTo(Tip $tip): void
     {
-        if ($this->title !== null)            { $tip->setTitle($this->title); }
-        if ($this->author !== null)           { $tip->setAuthor($this->author); }
-        if ($this->description !== null)      { $tip->setDescription($this->description); }
-        if ($this->shortDescription !== null) { $tip->setShortDescription($this->shortDescription); }
-        if ($this->authorTitle !== null)      { $tip->setAuthorTitle($this->authorTitle); }
-        if ($this->imageSrc !== null)         { $tip->setImageSrc($this->imageSrc); }
-        if ($this->tags !== null)             { $tip->setTags($this->tags); }
+        if (null !== $this->title) {
+            $tip->setTitle($this->title);
+        }
+        if (null !== $this->author) {
+            $tip->setAuthor($this->author);
+        }
+        if (null !== $this->description) {
+            $tip->setDescription($this->description);
+        }
+        if (null !== $this->shortDescription) {
+            $tip->setShortDescription($this->shortDescription);
+        }
+        if (null !== $this->authorTitle) {
+            $tip->setAuthorTitle($this->authorTitle);
+        }
+        if (null !== $this->imageSrc) {
+            $tip->setImageSrc($this->imageSrc);
+        }
+        if (null !== $this->tags) {
+            $tip->setTags($this->tags);
+        }
     }
 }

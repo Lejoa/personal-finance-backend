@@ -38,8 +38,8 @@ class AnalysisController extends AbstractController
             $analyses = $this->analysisService->getUserAnalyses($user);
 
             return $this->json([
-                'data'  => array_map(fn(FinancialAnalysis $a) => $this->serializeAnalysis($a), $analyses),
-                'total' => count($analyses),
+                'data' => array_map(fn (FinancialAnalysis $a) => $this->serializeAnalysis($a), $analyses),
+                'total' => \count($analyses),
             ]);
         } catch (\Exception $e) {
             return $this->json(
@@ -59,10 +59,10 @@ class AnalysisController extends AbstractController
     public function show(int $id): JsonResponse
     {
         /** @var User $user */
-        $user     = $this->getUser();
+        $user = $this->getUser();
         $analysis = $this->analysisService->findByIdAndUser($id, $user);
 
-        if ($analysis === null) {
+        if (null === $analysis) {
             return $this->json(
                 ['error' => 'Analysis not found'],
                 Response::HTTP_NOT_FOUND
@@ -83,11 +83,11 @@ class AnalysisController extends AbstractController
     private function serializeAnalysis(FinancialAnalysis $analysis): array
     {
         return [
-            'id'          => $analysis->getId(),
-            'period'      => $analysis->getPeriod(),
-            'checkpoint'  => $analysis->getCheckpoint(),
-            'content'     => $analysis->getContent(),
-            'isRead'      => $analysis->isRead(),
+            'id' => $analysis->getId(),
+            'period' => $analysis->getPeriod(),
+            'checkpoint' => $analysis->getCheckpoint(),
+            'content' => $analysis->getContent(),
+            'isRead' => $analysis->isRead(),
             'generatedAt' => $analysis->getGeneratedAt()?->format('Y-m-d H:i:s'),
         ];
     }

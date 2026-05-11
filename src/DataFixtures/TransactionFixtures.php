@@ -2,9 +2,9 @@
 
 namespace App\DataFixtures;
 
+use App\Entity\Category;
 use App\Entity\Transaction;
 use App\Entity\User;
-use App\Entity\Category;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
@@ -24,20 +24,20 @@ class TransactionFixtures extends Fixture implements DependentFixtureInterface
 
     /** Maps each expense category name to a list of realistic transaction names. */
     private array $keyValuesExpenses = [
-        'Alimentos'       => ['Supermercado', 'Restaurante', 'Comida rápida', 'Café', 'Delivery'],
-        'Transporte'      => ['Gasolina', 'Transporte público', 'Mantenimiento auto'],
+        'Alimentos' => ['Supermercado', 'Restaurante', 'Comida rápida', 'Café', 'Delivery'],
+        'Transporte' => ['Gasolina', 'Transporte público', 'Mantenimiento auto'],
         'Entretenimiento' => ['Cine', 'Teatro', 'Concierto', 'Videojuegos', 'Citas de pareja'],
-        'Salud'           => ['Farmacia', 'Dentista', 'Médico', 'Seguro'],
-        'Educación'       => ['Libros', 'Curso online'],
-        'Otros'           => ['Regalos', 'Colaboración', 'Lavandería', 'Peluquería'],
+        'Salud' => ['Farmacia', 'Dentista', 'Médico', 'Seguro'],
+        'Educación' => ['Libros', 'Curso online'],
+        'Otros' => ['Regalos', 'Colaboración', 'Lavandería', 'Peluquería'],
     ];
 
     /** Maps each income category name to a list of realistic transaction names. */
     private array $keyValuesIncomes = [
-        'Salario'     => ['Salario mensual', 'Bono anual'],
-        'Freelance'   => ['Freelance proyecto', 'Trabajo extra', 'Consultoría'],
+        'Salario' => ['Salario mensual', 'Bono anual'],
+        'Freelance' => ['Freelance proyecto', 'Trabajo extra', 'Consultoría'],
         'Inversiones' => ['Dividendos', 'Intereses banco'],
-        'Ventas'      => ['Venta artículos', 'Reembolso', 'Devolución impuestos'],
+        'Ventas' => ['Venta artículos', 'Reembolso', 'Devolución impuestos'],
     ];
 
     /**
@@ -50,14 +50,12 @@ class TransactionFixtures extends Fixture implements DependentFixtureInterface
         $user = $manager->getRepository(User::class)->findOneBy(['email' => self::USER_EMAIL]);
 
         if (!$user) {
-            throw new \RuntimeException(
-                'Usuario "' . self::USER_EMAIL . '" no encontrado. Haz login con Google primero y luego ejecuta los fixtures.'
-            );
+            throw new \RuntimeException('Usuario "' . self::USER_EMAIL . '" no encontrado. Haz login con Google primero y luego ejecuta los fixtures.');
         }
 
         $categoriesMap = $this->buildCategoriesMap($manager);
 
-        for ($i = 0; $i < self::TOTAL_TRANSACTIONS; $i++) {
+        for ($i = 0; $i < self::TOTAL_TRANSACTIONS; ++$i) {
             $isExpense = rand(0, 100) < 70;
             $type = $isExpense ? 'gasto' : 'ingreso';
 

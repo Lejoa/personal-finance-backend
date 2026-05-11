@@ -92,6 +92,7 @@ class Transaction
     public function setName(string $name): static
     {
         $this->name = $name;
+
         return $this;
     }
 
@@ -103,6 +104,7 @@ class Transaction
     public function setType(string $type): static
     {
         $this->type = $type;
+
         return $this;
     }
 
@@ -114,6 +116,7 @@ class Transaction
     public function setAmount(float $amount): static
     {
         $this->amount = $amount;
+
         return $this;
     }
 
@@ -125,6 +128,7 @@ class Transaction
     public function setDate(\DateTimeInterface $date): static
     {
         $this->date = $date;
+
         return $this;
     }
 
@@ -136,6 +140,7 @@ class Transaction
     public function setNote(?string $note): static
     {
         $this->note = $note;
+
         return $this;
     }
 
@@ -147,6 +152,7 @@ class Transaction
     public function setUser(?User $user): static
     {
         $this->user = $user;
+
         return $this;
     }
 
@@ -158,6 +164,7 @@ class Transaction
     public function setCategory(?Category $category): static
     {
         $this->category = $category;
+
         return $this;
     }
 
@@ -169,6 +176,7 @@ class Transaction
     public function setCreatedAt(\DateTimeInterface $createdAt): static
     {
         $this->createdAt = $createdAt;
+
         return $this;
     }
 
@@ -180,6 +188,7 @@ class Transaction
     public function setSynchronized(string $synchronized): static
     {
         $this->synchronized = $synchronized;
+
         return $this;
     }
 
@@ -191,6 +200,7 @@ class Transaction
     public function setSource(?string $source): static
     {
         $this->source = $source;
+
         return $this;
     }
 }

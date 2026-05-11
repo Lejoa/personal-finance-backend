@@ -11,5 +11,6 @@ class ChatResponseDTO
         public readonly string $timestamp,
         public readonly int $conversationId,
         public readonly ?array $metadata = null
-    ) {}
+    ) {
+    }
 }

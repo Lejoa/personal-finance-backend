@@ -51,6 +51,7 @@ class User implements UserInterface
     public function setEmail(string $email): self
     {
         $this->email = $email;
+
         return $this;
     }
 
@@ -62,6 +63,7 @@ class User implements UserInterface
     public function setGoogleId(?string $googleId): self
     {
         $this->googleId = $googleId;
+
         return $this;
     }
 
@@ -73,6 +75,7 @@ class User implements UserInterface
     public function setName(string $name): self
     {
         $this->name = $name;
+
         return $this;
     }
 
@@ -84,6 +87,7 @@ class User implements UserInterface
     public function setAvatar(?string $avatar): self
     {
         $this->avatar = $avatar;
+
         return $this;
     }
 
@@ -91,12 +95,14 @@ class User implements UserInterface
     {
         $roles = $this->roles;
         $roles[] = 'ROLE_USER';
+
         return array_unique($roles);
     }
 
     public function setRoles(array $roles): self
     {
         $this->roles = $roles;
+
         return $this;
     }
 
@@ -107,7 +113,7 @@ class User implements UserInterface
 
     /**
      * Retorna el identificador único del usuario (requerido por UserInterface)
-     * Usamos el email como identificador principal
+     * Usamos el email como identificador principal.
      */
     public function getUserIdentifier(): string
     {
@@ -116,7 +122,7 @@ class User implements UserInterface
 
     /**
      * Este método se llama después de la autenticación para limpiar datos sensibles
-     * Como usamos OAuth, no tenemos contraseñas que limpiar
+     * Como usamos OAuth, no tenemos contraseñas que limpiar.
      */
     public function eraseCredentials(): void
     {

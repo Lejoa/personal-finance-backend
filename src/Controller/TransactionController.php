@@ -46,7 +46,7 @@ class TransactionController extends AbstractController
             $dto = $this->serializer->deserialize($request->getContent(), CreateTransactionRequest::class, 'json');
 
             $errors = $this->validator->validate($dto);
-            if (count($errors) > 0) {
+            if (\count($errors) > 0) {
                 return $this->json(
                     ['error' => 'Validation failed', 'violations' => $this->formatErrors($errors)],
                     Response::HTTP_BAD_REQUEST
@@ -78,11 +78,11 @@ class TransactionController extends AbstractController
         /** @var User $user */
         $user = $this->getUser();
 
-        $type      = $request->query->get('type');
+        $type = $request->query->get('type');
         $startDate = $request->query->get('startDate');
-        $endDate   = $request->query->get('endDate');
-        $limit     = $request->query->get('limit');
-        $sync      = $request->query->get('sync');
+        $endDate = $request->query->get('endDate');
+        $limit = $request->query->get('limit');
+        $sync = $request->query->get('sync');
 
         $transactions = $this->transactionService->getUserTransactions(
             $user,
@@ -94,8 +94,8 @@ class TransactionController extends AbstractController
         );
 
         return $this->json([
-            'data'  => array_map(fn(Transaction $transaction) => $this->serializeTransaction($transaction), $transactions),
-            'total' => count($transactions),
+            'data' => array_map(fn (Transaction $transaction) => $this->serializeTransaction($transaction), $transactions),
+            'total' => \count($transactions),
         ]);
     }
 
@@ -107,10 +107,10 @@ class TransactionController extends AbstractController
     public function show(int $id): JsonResponse
     {
         /** @var User $user */
-        $user        = $this->getUser();
+        $user = $this->getUser();
         $transaction = $this->transactionService->getTransactionById($id, $user);
 
-        if ($transaction === null) {
+        if (null === $transaction) {
             return $this->json(['error' => 'Transaction not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -126,10 +126,10 @@ class TransactionController extends AbstractController
     public function update(int $id, Request $request): JsonResponse
     {
         /** @var User $user */
-        $user        = $this->getUser();
+        $user = $this->getUser();
         $transaction = $this->transactionService->getTransactionById($id, $user);
 
-        if ($transaction === null) {
+        if (null === $transaction) {
             return $this->json(['error' => 'Transaction not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -137,7 +137,7 @@ class TransactionController extends AbstractController
             $dto = $this->serializer->deserialize($request->getContent(), UpdateTransactionRequest::class, 'json');
 
             $errors = $this->validator->validate($dto);
-            if (count($errors) > 0) {
+            if (\count($errors) > 0) {
                 return $this->json(
                     ['error' => 'Validation failed', 'violations' => $this->formatErrors($errors)],
                     Response::HTTP_BAD_REQUEST
@@ -147,7 +147,7 @@ class TransactionController extends AbstractController
             $updatedTransaction = $this->transactionService->updateTransaction($transaction, $dto);
 
             return $this->json([
-                'message'     => 'Transaction updated successfully',
+                'message' => 'Transaction updated successfully',
                 'transaction' => $this->serializeTransaction($updatedTransaction),
             ]);
         } catch (\Exception $e) {
@@ -167,10 +167,10 @@ class TransactionController extends AbstractController
     public function feedback(int $id): JsonResponse
     {
         /** @var User $user */
-        $user        = $this->getUser();
+        $user = $this->getUser();
         $transaction = $this->transactionService->getTransactionById($id, $user);
 
-        if ($transaction === null) {
+        if (null === $transaction) {
             return $this->json(['error' => 'Transaction not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -187,10 +187,10 @@ class TransactionController extends AbstractController
     public function delete(int $id): JsonResponse
     {
         /** @var User $user */
-        $user        = $this->getUser();
+        $user = $this->getUser();
         $transaction = $this->transactionService->getTransactionById($id, $user);
 
-        if ($transaction === null) {
+        if (null === $transaction) {
             return $this->json(['error' => 'Transaction not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -217,17 +217,17 @@ class TransactionController extends AbstractController
         $category = $transaction->getCategory();
 
         return [
-            'id'           => $transaction->getId(),
-            'name'         => $transaction->getName(),
-            'type'         => $transaction->getType(),
-            'amount'       => $transaction->getAmount(),
-            'date'         => $transaction->getDate()?->format('Y-m-d'),
-            'note'         => $transaction->getNote(),
-            'categoryId'   => $category?->getId(),
+            'id' => $transaction->getId(),
+            'name' => $transaction->getName(),
+            'type' => $transaction->getType(),
+            'amount' => $transaction->getAmount(),
+            'date' => $transaction->getDate()?->format('Y-m-d'),
+            'note' => $transaction->getNote(),
+            'categoryId' => $category?->getId(),
             'categoryName' => $category?->getName(),
             'synchronized' => $transaction->getSynchronized(),
-            'source'       => $transaction->getSource(),
-            'createdAt'    => $transaction->getCreatedAt()?->format('Y-m-d H:i:s'),
+            'source' => $transaction->getSource(),
+            'createdAt' => $transaction->getCreatedAt()?->format('Y-m-d H:i:s'),
         ];
     }
 
@@ -241,6 +241,7 @@ class TransactionController extends AbstractController
         foreach ($errors as $error) {
             $formatted[$error->getPropertyPath()] = $error->getMessage();
         }
+
         return $formatted;
     }
 }

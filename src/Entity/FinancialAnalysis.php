@@ -53,6 +53,7 @@ class FinancialAnalysis
     public function setUser(?User $user): static
     {
         $this->user = $user;
+
         return $this;
     }
 
@@ -64,6 +65,7 @@ class FinancialAnalysis
     public function setPeriod(string $period): static
     {
         $this->period = $period;
+
         return $this;
     }
 
@@ -75,6 +77,7 @@ class FinancialAnalysis
     public function setCheckpoint(string $checkpoint): static
     {
         $this->checkpoint = $checkpoint;
+
         return $this;
     }
 
@@ -86,6 +89,7 @@ class FinancialAnalysis
     public function setContent(string $content): static
     {
         $this->content = $content;
+
         return $this;
     }
 
@@ -97,6 +101,7 @@ class FinancialAnalysis
     public function setIsRead(bool $isRead): static
     {
         $this->isRead = $isRead;
+
         return $this;
     }
 

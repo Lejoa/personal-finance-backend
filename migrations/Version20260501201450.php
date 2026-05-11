@@ -21,7 +21,7 @@ final class Version20260501201450 extends AbstractMigration
     {
         // this up() migration is auto-generated, please modify it to your needs
         $this->addSql("ALTER TABLE loan_calculations ADD name VARCHAR(100) NOT NULL DEFAULT ''");
-        $this->addSql("ALTER TABLE loan_calculations ALTER COLUMN name DROP DEFAULT");
+        $this->addSql('ALTER TABLE loan_calculations ALTER COLUMN name DROP DEFAULT');
     }
 
     public function down(Schema $schema): void

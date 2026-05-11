@@ -30,45 +30,50 @@ class TransactionExportController extends AbstractController
     public function exportCsv(Request $request): StreamedResponse
     {
         /** @var User $user */
-        $user       = $this->getUser();
-        $type       = $request->query->get('type');
-        $startDate  = $request->query->get('startDate');
-        $endDate    = $request->query->get('endDate');
+        $user = $this->getUser();
+        $type = $request->query->get('type');
+        $startDate = $request->query->get('startDate');
+        $endDate = $request->query->get('endDate');
         $categoryId = $request->query->get('categoryId');
 
         $transactions = $this->transactionService->getUserTransactions(
-            $user, $type, $startDate, $endDate, null, null
+            $user,
+            $type,
+            $startDate,
+            $endDate,
+            null,
+            null
         );
 
-        if ($categoryId !== null && $categoryId !== '') {
+        if (null !== $categoryId && '' !== $categoryId) {
             $transactions = array_values(array_filter(
                 $transactions,
-                fn(Transaction $t) => $t->getCategory()?->getId() === (int) $categoryId
+                static fn (Transaction $t) => $t->getCategory()?->getId() === (int) $categoryId
             ));
         }
 
-        $filename = 'transacciones_' . (new \DateTimeImmutable())->format('Y-m-d') . '.csv';
+        $filename = 'transacciones_' .( new \DateTimeImmutable())->format('Y-m-d') . '.csv';
 
-        $response = new StreamedResponse(function () use ($transactions) {
+        $response = new StreamedResponse(static function () use ($transactions) {
             $handle = fopen('php://output', 'w');
             fwrite($handle, "\xEF\xBB\xBF");
             fputcsv($handle, ['Fecha', 'Nombre', 'Tipo', 'Categoría', 'Monto', 'Nota', 'Fuente']);
 
-            $totalIncome   = 0.0;
+            $totalIncome = 0.0;
             $totalExpenses = 0.0;
 
             foreach ($transactions as $t) {
                 fputcsv($handle, [
                     $t->getDate()?->format('d/m/Y') ?? '',
                     $t->getName() ?? '',
-                    $t->getType() === 'ingreso' ? 'Ingreso' : 'Gasto',
+                    'ingreso' === $t->getType() ? 'Ingreso' : 'Gasto',
                     $t->getCategory()?->getName() ?? '',
                     $t->getAmount() ?? 0,
                     $t->getNote() ?? '',
-                    $t->getSource() === 'sms' ? 'SMS' : 'Manual',
+                    'sms' === $t->getSource() ? 'SMS' : 'Manual',
                 ]);
 
-                if ($t->getType() === 'ingreso') {
+                if ('ingreso' === $t->getType()) {
                     $totalIncome += $t->getAmount() ?? 0;
                 } else {
                     $totalExpenses += $t->getAmount() ?? 0;
