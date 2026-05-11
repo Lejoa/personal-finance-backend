@@ -7,20 +7,26 @@ use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 
 /**
- * Carga 10 consejos financieros de ejemplo.
+ * Seeds 10 financial tips divided into two groups based on the user's financial profile:
  *
- * 5 tips para usuarios con gastos > ingresos (tags: ahorro, gastos, deuda)
- * 5 tips para usuarios con buena salud financiera (tags: inversión, ingresos)
+ * - 5 tips for users whose expenses exceed their income (tags: ahorro, gastos, deuda).
+ * - 5 tips for users with healthy finances and surplus income (tags: inversión, ingresos).
  *
- * Los tags coinciden con los que calcula TipService::getRecommendedTips()
- * para que el matching funcione desde el primer momento.
+ * Tags are aligned with the logic in TipService::getRecommendedTips() so that
+ * the recommendation engine can match tips from the very first run.
+ *
+ * Safe to run with --append: tips are skipped if their title already exists.
  */
 class TipFixtures extends Fixture
 {
+    /**
+     * Persists all tips that do not already exist in the database.
+     * Uniqueness is checked by title before inserting each record.
+     */
     public function load(ObjectManager $manager): void
     {
         $tips = [
-            // ── Caso 1: gastos > ingresos ──────────────────────────────────
+            // Tips for users with expenses > income (spending control focus)
             [
                 'title'            => 'Gasta menos de lo que ganas',
                 'shortDescription' => 'Aprende a controlar tus gastos mediante un presupuesto claro. Identifica los gastos innecesarios y destina una parte fija al ahorro cada mes.',
@@ -67,7 +73,7 @@ class TipFixtures extends Fixture
                 'tags'             => 'ahorro,gastos,deuda',
             ],
 
-            // ── Caso 2: buena salud financiera ────────────────────────────
+            // Tips for users with good financial health (growth and investment focus)
             [
                 'title'            => 'Invierte a largo plazo',
                 'shortDescription' => 'Invertir no es solo para expertos. Enfócate en el largo plazo y diversifica para aprovechar el interés compuesto.',
@@ -115,7 +121,14 @@ class TipFixtures extends Fixture
             ],
         ];
 
+        $repo = $manager->getRepository(Tip::class);
+
         foreach ($tips as $data) {
+            // Skip if a tip with the same title already exists (--append safety).
+            if ($repo->findOneBy(['title' => $data['title']])) {
+                continue;
+            }
+
             $tip = new Tip();
             $tip->setTitle($data['title']);
             $tip->setShortDescription($data['shortDescription']);
