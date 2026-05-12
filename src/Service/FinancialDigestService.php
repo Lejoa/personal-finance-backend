@@ -14,7 +14,8 @@ class FinancialDigestService
         private readonly TransactionRepository $transactionRepository,
         private readonly BudgetRepository $budgetRepository,
         private readonly CacheInterface $financialDigestCache
-    ) {}
+    ) {
+    }
 
     /**
      * Returns the enriched financial digest for the user.
@@ -26,6 +27,7 @@ class FinancialDigestService
 
         return $this->financialDigestCache->get($key, function (ItemInterface $item) use ($user) {
             $item->expiresAfter(1800); // 30 minutes
+
             return $this->computeDigest($user);
         });
     }
@@ -40,7 +42,7 @@ class FinancialDigestService
 
     /**
      * Computes the enriched financial level based on user behavior signals.
-     * Returns: "principiante", "intermedio", or "avanzado"
+     * Returns: "principiante", "intermedio", or "avanzado".
      */
     public function computeFinancialLevel(User $user, array $digest): string
     {
@@ -52,7 +54,7 @@ class FinancialDigestService
         if ($daysSinceCreation >= 90) {
             $score += 2;
         } elseif ($daysSinceCreation >= 30) {
-            $score += 1;
+            ++$score;
         }
 
         // Transaction consistency: months with 5+ transactions in last 3 months
@@ -60,34 +62,39 @@ class FinancialDigestService
         if ($consistentMonths >= 3) {
             $score += 2;
         } elseif ($consistentMonths >= 2) {
-            $score += 1;
+            ++$score;
         }
 
         // Budget usage
         $budgetHealth = $digest['budget_health'] ?? [];
         if (!empty($budgetHealth)) {
-            $score += 1;
-            $allUnder = array_filter($budgetHealth, fn($b) => ($b['pct_used'] ?? 0) < 100);
-            if (count($allUnder) === count($budgetHealth)) {
-                $score += 1;
+            ++$score;
+            $allUnder = array_filter($budgetHealth, static fn ($b) => ($b['pct_used'] ?? 0) < 100);
+            if (\count($allUnder) === \count($budgetHealth)) {
+                ++$score;
             }
         }
 
         // Savings improving
         if (($digest['savings_improving'] ?? false) === true) {
-            $score += 1;
+            ++$score;
         }
 
         // Category diversity
-        $categoryCount = count($digest['category_trends'] ?? []);
+        $categoryCount = \count($digest['category_trends'] ?? []);
         if ($categoryCount >= 5) {
             $score += 2;
         } elseif ($categoryCount >= 3) {
-            $score += 1;
+            ++$score;
         }
 
-        if ($score >= 7) return 'avanzado';
-        if ($score >= 4) return 'intermedio';
+        if ($score >= 7) {
+            return 'avanzado';
+        }
+        if ($score >= 4) {
+            return 'intermedio';
+        }
+
         return 'principiante';
     }
 
@@ -109,15 +116,18 @@ class FinancialDigestService
 
         // Current month transactions
         $transactions = $this->transactionRepository->findByFilters(
-            $user, null, $startOfMonth, $endOfMonth
+            $user,
+            null,
+            $startOfMonth,
+            $endOfMonth
         );
 
         $totalExpenses = 0.0;
-        $totalIncome   = 0.0;
+        $totalIncome = 0.0;
         $categoryCurrentMonth = [];
 
         foreach ($transactions as $t) {
-            if ($t->getType() === 'gasto') {
+            if ('gasto' === $t->getType()) {
                 $totalExpenses += $t->getAmount();
                 $cat = $t->getCategory() ? $t->getCategory()->getName() : 'Sin categoría';
                 $categoryCurrentMonth[$cat] = ($categoryCurrentMonth[$cat] ?? 0.0) + $t->getAmount();
@@ -128,8 +138,8 @@ class FinancialDigestService
 
         // Previous month totals
         $previousTotals = $this->transactionRepository->getPreviousMonthTotals($user);
-        $prevIncome     = $previousTotals['income'];
-        $prevExpenses   = $previousTotals['expenses'];
+        $prevIncome = $previousTotals['income'];
+        $prevExpenses = $previousTotals['expenses'];
         $prevSavingsRate = $prevIncome > 0
             ? round((($prevIncome - $prevExpenses) / $prevIncome) * 100, 2)
             : 0.0;
@@ -139,17 +149,17 @@ class FinancialDigestService
             : 0.0;
 
         // Spending velocity and projection
-        $spendingVelocity  = $dayOfMonth > 0 ? round($totalExpenses / $dayOfMonth, 2) : 0.0;
+        $spendingVelocity = $dayOfMonth > 0 ? round($totalExpenses / $dayOfMonth, 2) : 0.0;
         $projectedExpenses = round($spendingVelocity * $daysInMonth, 2);
 
         // Category trends: compare current month vs 3-month average
         $categoryTrends = [];
         foreach ($categoryCurrentMonth as $catName => $currentAmount) {
             $categoryTrends[] = [
-                'name'          => $catName,
+                'name' => $catName,
                 'current_month' => $currentAmount,
-                'avg_3_months'  => 0.0,
-                'delta_pct'     => 0.0,
+                'avg_3_months' => 0.0,
+                'delta_pct' => 0.0,
             ];
         }
 
@@ -157,11 +167,11 @@ class FinancialDigestService
         $categories = $this->transactionRepository->getExpenseCategoryIds($user);
         $historicalMap = [];
         foreach ($categories as $row) {
-            $catId   = $row['id'];
+            $catId = $row['id'];
             $catName = $row['name'];
             $history = $this->transactionRepository->getMonthlyCategorySpending($user, $catId, 3);
             if (!empty($history)) {
-                $avg = array_sum(array_column($history, 'total')) / count($history);
+                $avg = array_sum(array_column($history, 'total')) / \count($history);
                 $historicalMap[$catName] = round($avg, 2);
             }
         }
@@ -169,14 +179,14 @@ class FinancialDigestService
         $categoryTrends = [];
         arsort($categoryCurrentMonth);
         foreach ($categoryCurrentMonth as $catName => $currentAmount) {
-            $avg      = $historicalMap[$catName] ?? 0.0;
+            $avg = $historicalMap[$catName] ?? 0.0;
             $deltaPct = $avg > 0 ? round((($currentAmount - $avg) / $avg) * 100, 1) : 0.0;
 
             $categoryTrends[] = [
-                'name'          => $catName,
+                'name' => $catName,
                 'current_month' => $currentAmount,
-                'avg_3_months'  => $avg,
-                'delta_pct'     => $deltaPct,
+                'avg_3_months' => $avg,
+                'delta_pct' => $deltaPct,
             ];
         }
 
@@ -189,15 +199,15 @@ class FinancialDigestService
             }
             foreach ($budget->getBudgetCategories() as $bc) {
                 $catName = $bc->getCategory()->getName();
-                $limit   = $bc->getAmount();
-                $spent   = $categoryCurrentMonth[$catName] ?? 0.0;
+                $limit = $bc->getAmount();
+                $spent = $categoryCurrentMonth[$catName] ?? 0.0;
                 $pctUsed = $limit > 0 ? round(($spent / $limit) * 100, 1) : 0.0;
 
                 $budgetHealth[] = [
-                    'name'           => $catName,
-                    'limit'          => $limit,
-                    'spent'          => $spent,
-                    'pct_used'       => $pctUsed,
+                    'name' => $catName,
+                    'limit' => $limit,
+                    'spent' => $spent,
+                    'pct_used' => $pctUsed,
                     'days_remaining' => $daysRemaining,
                 ];
             }
@@ -206,7 +216,7 @@ class FinancialDigestService
         // Anomalies: categories spending > 150% of 3-month average
         $anomalies = array_filter(
             $categoryTrends,
-            fn($t) => $t['avg_3_months'] > 0 && $t['delta_pct'] > 50.0
+            static fn ($t) => $t['avg_3_months'] > 0 && $t['delta_pct'] > 50.0
         );
 
         // Consistent months: count months in last 3 with at least 5 transactions
@@ -216,15 +226,15 @@ class FinancialDigestService
         $savingsImproving = $currentSavingsRate > $prevSavingsRate;
 
         return [
-            'spending_velocity'   => $spendingVelocity,
-            'projected_expenses'  => $projectedExpenses,
+            'spending_velocity' => $spendingVelocity,
+            'projected_expenses' => $projectedExpenses,
             'previous_savings_rate' => $prevSavingsRate,
-            'savings_improving'   => $savingsImproving,
-            'category_trends'     => array_values($categoryTrends),
-            'budget_health'       => $budgetHealth,
-            'anomalies'           => array_values($anomalies),
-            'consistent_months'   => $consistentMonths,
-            'days_remaining'      => $daysRemaining,
+            'savings_improving' => $savingsImproving,
+            'category_trends' => array_values($categoryTrends),
+            'budget_health' => $budgetHealth,
+            'anomalies' => array_values($anomalies),
+            'consistent_months' => $consistentMonths,
+            'days_remaining' => $daysRemaining,
         ];
     }
 }

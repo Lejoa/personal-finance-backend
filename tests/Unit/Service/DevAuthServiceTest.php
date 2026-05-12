@@ -108,6 +108,7 @@ class DevAuthServiceTest extends TestCase
         $ref = new \ReflectionProperty(User::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($user, $id);
+
         return $user;
     }
 
@@ -116,6 +117,7 @@ class DevAuthServiceTest extends TestCase
         $dto = new DevTokenRequest();
         $dto->email = $email;
         $dto->name = $name;
+
         return $dto;
     }
 }

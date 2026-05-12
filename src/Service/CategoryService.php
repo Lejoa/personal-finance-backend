@@ -38,11 +38,11 @@ class CategoryService
      */
     public function updateCategory(Category $category, UpdateCategoryRequest $dto): Category
     {
-        if ($dto->name !== null) {
+        if (null !== $dto->name) {
             $category->setName($dto->name);
         }
 
-        if ($dto->description !== null) {
+        if (null !== $dto->description) {
             $category->setDescription($dto->description);
         }
 
@@ -62,10 +62,7 @@ class CategoryService
             ->count(['category' => $category]);
 
         if ($transactionCount > 0) {
-            throw new \InvalidArgumentException(
-                "Cannot delete category \"{$category->getName()}\" because it has {$transactionCount} " .
-                ($transactionCount === 1 ? 'associated transaction.' : 'associated transactions.')
-            );
+            throw new \InvalidArgumentException("Cannot delete category \"{$category->getName()}\" because it has {$transactionCount} " . (1 === $transactionCount ? 'associated transaction.' : 'associated transactions.'));
         }
 
         $this->entityManager->remove($category);
@@ -81,11 +78,11 @@ class CategoryService
     {
         $criteria = [];
 
-        if ($type !== null) {
+        if (null !== $type) {
             $criteria['type'] = $type;
         }
 
-        if ($name !== null) {
+        if (null !== $name) {
             $criteria['name'] = $name;
         }
 

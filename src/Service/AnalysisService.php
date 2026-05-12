@@ -35,23 +35,23 @@ class AnalysisService
         }
 
         $context = $this->contextService->buildContext($user);
-        $goal    = $this->buildGoal($checkpoint);
+        $goal = $this->buildGoal($checkpoint);
 
         try {
             $response = $this->httpClient->request('POST', $this->llmServiceUrl . '/llm/financial-insights', [
                 'json' => [
                     'user_context' => $context['userContext'],
-                    'summary'      => $context['summary'],
-                    'categories'   => $context['categories'],
-                    'budgets'      => $context['budgets'],
-                    'top_tip'      => $context['top_tip'],
-                    'goal'         => $goal,
+                    'summary' => $context['summary'],
+                    'categories' => $context['categories'],
+                    'budgets' => $context['budgets'],
+                    'top_tip' => $context['top_tip'],
+                    'goal' => $goal,
                 ],
-                'timeout'      => 300,
+                'timeout' => 300,
                 'max_duration' => 300,
             ]);
 
-            $data    = $response->toArray();
+            $data = $response->toArray();
             $content = $data['insights'][0]['message'] ?? null;
         } catch (\Throwable $e) {
             throw $e;
@@ -112,7 +112,7 @@ class AnalysisService
      */
     private function buildGoal(string $checkpoint): string
     {
-        if ($checkpoint === 'mid') {
+        if ('mid' === $checkpoint) {
             return 'Genera un análisis pedagógico de mediados de mes. Identifica patrones de gasto hasta ahora, señala al menos una fortaleza y una oportunidad de mejora, y termina con una pregunta reflexiva.';
         }
 

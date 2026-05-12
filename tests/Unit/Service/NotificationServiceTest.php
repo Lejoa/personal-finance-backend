@@ -131,6 +131,7 @@ class NotificationServiceTest extends TestCase
         $ref = new \ReflectionProperty(User::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($user, $id);
+
         return $user;
     }
 
@@ -144,6 +145,7 @@ class NotificationServiceTest extends TestCase
         $ref = new \ReflectionProperty(FinancialAnalysis::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($analysis, 1);
+
         return $analysis;
     }
 
@@ -153,6 +155,7 @@ class NotificationServiceTest extends TestCase
         $n->setMessage('Test notification');
         $n->setType('analysis_ready');
         $n->setUser($this->makeUser());
+
         return $n;
     }
 }

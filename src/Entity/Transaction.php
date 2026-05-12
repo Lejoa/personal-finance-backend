@@ -65,9 +65,9 @@ class Transaction
     private string $synchronized = 'pending';
 
     /**
-     * Origen de la transacción: 'manual' (registrada por el usuario), 'sms' (detectada automáticamente)
-     * o 'chat' (registrada por el asistente financiero conversacional).
-     * Nullable para compatibilidad con registros anteriores.
+     * Transaction source: 'manual' (entered by the user), 'sms' (auto-detected from the Android SMS inbox),
+     * or 'chat' (recorded by the conversational financial assistant).
+     * Nullable for backwards compatibility with records that predate this field.
      */
     #[ORM\Column(length: 20, nullable: true)]
     private ?string $source = 'manual';

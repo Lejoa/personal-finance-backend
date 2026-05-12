@@ -58,9 +58,9 @@ class CreateTransactionRequest
     public ?string $synchronized = null;
 
     /**
-     * Origen de la transacción. 'manual' por defecto; 'sms' cuando proviene
-     * de la lectura automática del buzón de SMS del dispositivo Android;
-     * 'chat' cuando es registrada por el asistente financiero conversacional.
+     * Transaction source. Defaults to 'manual'; set to 'sms' when ingested
+     * from the Android device SMS inbox; set to 'chat' when recorded by the
+     * conversational financial assistant.
      */
     #[Assert\Choice(
         choices: ['manual', 'sms', 'chat'],

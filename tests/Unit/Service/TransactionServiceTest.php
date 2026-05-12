@@ -299,6 +299,7 @@ class TransactionServiceTest extends TestCase
         $ref = new \ReflectionProperty(User::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($user, $id);
+
         return $user;
     }
 
@@ -310,6 +311,7 @@ class TransactionServiceTest extends TestCase
         $ref = new \ReflectionProperty(Category::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($category, $id);
+
         return $category;
     }
 
@@ -318,6 +320,7 @@ class TransactionServiceTest extends TestCase
         $t = new Transaction();
         $t->setType($type);
         $t->setAmount($amount);
+
         return $t;
     }
 }

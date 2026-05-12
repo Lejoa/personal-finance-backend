@@ -50,8 +50,8 @@ class ChatService
         $this->entityManager->persist($userMessage);
         $this->entityManager->flush();
 
-        $context           = $this->contextService->buildContext($user);
-        $contextType       = $this->classifyContextNeeds($dto->message);
+        $context = $this->contextService->buildContext($user);
+        $contextType = $this->classifyContextNeeds($dto->message);
         $additionalContext = $this->contextService->buildAdditionalContext($user, $contextType);
 
         $llmRequest = new LlmChatRequestDTO(
@@ -64,13 +64,13 @@ class ChatService
             contextType: $contextType
         );
 
-        $llmResponse       = $this->callLlmService($llmRequest);
-        $metadata          = $llmResponse['metadata'] ?? [];
+        $llmResponse = $this->callLlmService($llmRequest);
+        $metadata = $llmResponse['metadata'] ?? [];
         $transactionAction = $llmResponse['transaction_action'] ?? null;
 
-        if ($transactionAction !== null) {
+        if (null !== $transactionAction) {
             $transactionMetadata = $this->processTransactionAction($transactionAction, $user);
-            $metadata            = array_merge($metadata, $transactionMetadata);
+            $metadata = array_merge($metadata, $transactionMetadata);
         }
 
         $assistantMessage = new ChatMessage();
@@ -105,16 +105,17 @@ class ChatService
         }
 
         try {
-            $transaction       = $this->transactionService->createTransaction($dto, $user);
+            $transaction = $this->transactionService->createTransaction($dto, $user);
             $suggestedCategory = $this->resolveCategory($transactionAction['category_name'] ?? null, $dto->type);
 
             return $this->buildPendingCategorizationMetadata($transaction, $dto->type, $suggestedCategory);
         } catch (\Exception $e) {
             $this->logger->error('processTransactionAction failed: ' . $e->getMessage(), [
-                'exception'          => $e->getMessage(),
-                'trace'              => $e->getTraceAsString(),
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'transaction_action' => $transactionAction,
             ]);
+
             return [];
         }
     }
@@ -125,19 +126,20 @@ class ChatService
      */
     private function buildTransactionDto(array $transactionAction): ?CreateTransactionRequest
     {
-        $dto         = new CreateTransactionRequest();
-        $dto->name   = $transactionAction['name']   ?? null;
-        $dto->type   = $transactionAction['type']   ?? null;
+        $dto = new CreateTransactionRequest();
+        $dto->name = $transactionAction['name'] ?? null;
+        $dto->type = $transactionAction['type'] ?? null;
         $dto->amount = isset($transactionAction['amount']) ? (float) $transactionAction['amount'] : null;
-        $dto->date   = $transactionAction['date']   ?? date('Y-m-d');
+        $dto->date = $transactionAction['date'] ?? date('Y-m-d');
         $dto->source = 'chat';
 
         $errors = $this->validator->validate($dto);
 
-        if (count($errors) > 0) {
+        if (\count($errors) > 0) {
             $this->logger->error('buildTransactionDto validation failed: ' . (string) $errors, [
                 'dto' => (array) $dto,
             ]);
+
             return null;
         }
 
@@ -150,7 +152,7 @@ class ChatService
      */
     private function resolveCategory(?string $categoryName, string $transactionType): ?Category
     {
-        if (!$categoryName || $categoryName === 'Otros') {
+        if (!$categoryName || 'Otros' === $categoryName) {
             return null;
         }
 
@@ -172,25 +174,25 @@ class ChatService
     ): array {
         $available = $this->categoryRepository->findBy(['type' => $transactionType]);
 
-        $suggested = $suggestedCategory !== null
+        $suggested = null !== $suggestedCategory
             ? ['id' => $suggestedCategory->getId(), 'name' => $suggestedCategory->getName()]
             : null;
 
         $otherCategories = array_values(array_filter(
             $available,
-            fn(Category $cat) => $suggestedCategory === null || $cat->getId() !== $suggestedCategory->getId()
+            static fn (Category $cat) => null === $suggestedCategory || $cat->getId() !== $suggestedCategory->getId()
         ));
 
         return [
             'pending_categorization' => [
-                'transaction_id'     => $transaction->getId(),
-                'name'               => $transaction->getName(),
-                'type'               => $transaction->getType(),
-                'amount'             => $transaction->getAmount(),
-                'date'               => $transaction->getDate()->format('Y-m-d'),
+                'transaction_id' => $transaction->getId(),
+                'name' => $transaction->getName(),
+                'type' => $transaction->getType(),
+                'amount' => $transaction->getAmount(),
+                'date' => $transaction->getDate()->format('Y-m-d'),
                 'suggested_category' => $suggested,
-                'categories'         => array_map(
-                    fn(Category $cat) => ['id' => $cat->getId(), 'name' => $cat->getName()],
+                'categories' => array_map(
+                    static fn (Category $cat) => ['id' => $cat->getId(), 'name' => $cat->getName()],
                     $otherCategories
                 ),
             ],
@@ -231,9 +233,9 @@ class ChatService
      */
     private function getOrCreateConversation(ChatRequestDTO $dto, User $user): ChatConversation
     {
-        if ($dto->conversationId !== null) {
+        if (null !== $dto->conversationId) {
             $conversation = $this->conversationRepository->findOneByIdAndUser($dto->conversationId, $user);
-            if ($conversation !== null) {
+            if (null !== $conversation) {
                 return $conversation;
             }
         }
@@ -268,20 +270,18 @@ class ChatService
     {
         try {
             $response = $this->httpClient->request('POST', $this->llmServiceUrl . '/llm/classify-context', [
-                'json'         => ['message' => $message],
-                'timeout'      => 15,
+                'json' => ['message' => $message],
+                'timeout' => 15,
                 'max_duration' => 15,
             ]);
 
-            if ($response->getStatusCode() === 422) {
+            if (422 === $response->getStatusCode()) {
                 $detail = $response->toArray(false);
-                throw new \RuntimeException(
-                    $detail['detail']['message'] ?? 'Message rejected by safety guardrails.',
-                    422
-                );
+                throw new \RuntimeException($detail['detail']['message'] ?? 'Message rejected by safety guardrails.', 422);
             }
 
             $data = $response->toArray();
+
             return $data['context_type'] ?? 'none';
         } catch (\RuntimeException $e) {
             throw $e;
@@ -289,6 +289,7 @@ class ChatService
             $this->logger->warning('Context classification failed, defaulting to none', [
                 'error' => $e->getMessage(),
             ]);
+
             return 'none';
         }
     }
@@ -299,8 +300,8 @@ class ChatService
     private function callLlmService(LlmChatRequestDTO $request): array
     {
         $response = $this->httpClient->request('POST', $this->llmServiceUrl . '/llm/chat', [
-            'json'         => $request->toArray(),
-            'timeout'      => 120,
+            'json' => $request->toArray(),
+            'timeout' => 120,
             'max_duration' => 120,
         ]);
 

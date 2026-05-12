@@ -93,12 +93,12 @@ class ChatServiceTest extends TestCase
         $dto = $this->makeDto('Mensaje inapropiado');
 
         $idCounter = 1;
-        $this->em->method('persist')->willReturnCallback(function ($entity) use (&$idCounter) {
+        $this->em->method('persist')->willReturnCallback(static function ($entity) use (&$idCounter) {
             $ref = new \ReflectionClass($entity);
             if ($ref->hasProperty('id')) {
                 $prop = $ref->getProperty('id');
                 $prop->setAccessible(true);
-                if ($prop->getValue($entity) === null) {
+                if (null === $prop->getValue($entity)) {
                     $prop->setValue($entity, $idCounter++);
                 }
             }
@@ -114,7 +114,7 @@ class ChatServiceTest extends TestCase
         ]);
 
         $this->httpClient->method('request')
-            ->willReturnCallback(function (string $method, string $url) use ($classifyResponse) {
+            ->willReturnCallback(static function (string $method, string $url) use ($classifyResponse) {
                 if (str_contains($url, 'classify-context')) {
                     return $classifyResponse;
                 }
@@ -133,13 +133,13 @@ class ChatServiceTest extends TestCase
 
         $persistedClasses = [];
         $idCounter = 1;
-        $this->em->method('persist')->willReturnCallback(function ($obj) use (&$persistedClasses, &$idCounter) {
-            $persistedClasses[] = get_class($obj);
+        $this->em->method('persist')->willReturnCallback(static function ($obj) use (&$persistedClasses, &$idCounter) {
+            $persistedClasses[] = $obj::class;
             $ref = new \ReflectionClass($obj);
             if ($ref->hasProperty('id')) {
                 $prop = $ref->getProperty('id');
                 $prop->setAccessible(true);
-                if ($prop->getValue($obj) === null) {
+                if (null === $prop->getValue($obj)) {
                     $prop->setValue($obj, $idCounter++);
                 }
             }
@@ -226,6 +226,7 @@ class ChatServiceTest extends TestCase
         $ref = new \ReflectionProperty(User::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($user, $id);
+
         return $user;
     }
 
@@ -237,6 +238,7 @@ class ChatServiceTest extends TestCase
         $ref = new \ReflectionProperty(ChatConversation::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($conv, $id);
+
         return $conv;
     }
 
@@ -245,6 +247,7 @@ class ChatServiceTest extends TestCase
         $dto = new ChatRequestDTO();
         $dto->message = $message;
         $dto->conversationId = $conversationId;
+
         return $dto;
     }
 
@@ -262,10 +265,11 @@ class ChatServiceTest extends TestCase
         ]);
 
         $this->httpClient->method('request')
-            ->willReturnCallback(function (string $method, string $url) use ($classifyResponse, $chatResponse) {
+            ->willReturnCallback(static function (string $method, string $url) use ($classifyResponse, $chatResponse) {
                 if (str_contains($url, 'classify-context')) {
                     return $classifyResponse;
                 }
+
                 return $chatResponse;
             });
     }
@@ -298,22 +302,23 @@ class ChatServiceTest extends TestCase
         ]);
 
         $this->httpClient->method('request')
-            ->willReturnCallback(function (string $method, string $url) use ($classifyResponse, $chatResponse) {
+            ->willReturnCallback(static function (string $method, string $url) use ($classifyResponse, $chatResponse) {
                 if (str_contains($url, 'classify-context')) {
                     return $classifyResponse;
                 }
+
                 return $chatResponse;
             });
 
         // After flush, assign IDs to any ChatMessage/ChatConversation without one
         $idCounter = 1;
-        $this->em->method('flush')->willReturnCallback(function () use (&$idCounter) {});
-        $this->em->method('persist')->willReturnCallback(function ($entity) use (&$idCounter) {
+        $this->em->method('flush')->willReturnCallback(static function () use (&$idCounter) {});
+        $this->em->method('persist')->willReturnCallback(static function ($entity) use (&$idCounter) {
             $ref = new \ReflectionClass($entity);
             if ($ref->hasProperty('id')) {
                 $prop = $ref->getProperty('id');
                 $prop->setAccessible(true);
-                if ($prop->getValue($entity) === null) {
+                if (null === $prop->getValue($entity)) {
                     $prop->setValue($entity, $idCounter++);
                 }
             }

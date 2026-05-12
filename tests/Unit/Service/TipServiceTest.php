@@ -200,6 +200,7 @@ class TipServiceTest extends TestCase
         $ref = new \ReflectionProperty(User::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($user, $id);
+
         return $user;
     }
 
@@ -214,6 +215,7 @@ class TipServiceTest extends TestCase
         $ref = new \ReflectionProperty(Tip::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($tip, $id);
+
         return $tip;
     }
 
@@ -227,6 +229,7 @@ class TipServiceTest extends TestCase
         $dto->authorTitle = 'Experto';
         $dto->imageSrc = 'https://example.com/image.png';
         $dto->tags = 'ahorro,finanzas';
+
         return $dto;
     }
 }

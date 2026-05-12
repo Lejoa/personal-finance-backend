@@ -62,12 +62,12 @@ class LoanCalculationController extends AbstractController
             $calc = $this->loanService->create($user, $dto);
 
             return $this->json(
-                ['message' => 'Cálculo guardado correctamente.', 'calculation' => $this->serialize($calc)],
+                ['message' => 'Calculation saved successfully.', 'calculation' => $this->serialize($calc)],
                 Response::HTTP_CREATED
             );
         } catch (\Exception $e) {
             return $this->json(
-                ['error' => 'Error al guardar el cálculo.', 'message' => $e->getMessage()],
+                ['error' => 'Failed to save calculation.', 'message' => $e->getMessage()],
                 Response::HTTP_INTERNAL_SERVER_ERROR
             );
         }
@@ -82,14 +82,14 @@ class LoanCalculationController extends AbstractController
         try {
             $this->loanService->delete($id, $user);
 
-            return $this->json(['message' => 'Cálculo eliminado correctamente.']);
+            return $this->json(['message' => 'Calculation deleted successfully.']);
         } catch (NotFoundHttpException $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_NOT_FOUND);
         } catch (AccessDeniedHttpException $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (\Exception $e) {
             return $this->json(
-                ['error' => 'Error al eliminar el cálculo.', 'message' => $e->getMessage()],
+                ['error' => 'Failed to delete calculation.', 'message' => $e->getMessage()],
                 Response::HTTP_INTERNAL_SERVER_ERROR
             );
         }

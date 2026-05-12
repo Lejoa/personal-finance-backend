@@ -15,7 +15,7 @@ class CreateBudgetRequest
     public ?string $endDate = null;
 
     /**
-     * Array de objetos con estructura: [{"categoryId": 1, "amount": 100.50}, ...].
+     * Array of category budget entries: [{"categoryId": 1, "amount": 100.50}, ...].
      *
      * @var array<int, array{categoryId: int, amount: float}>
      */

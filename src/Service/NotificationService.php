@@ -74,7 +74,7 @@ class NotificationService
      */
     private function buildAnalysisMessage(FinancialAnalysis $analysis): string
     {
-        $label = $analysis->getCheckpoint() === 'mid' ? 'mediados' : 'cierre';
+        $label = 'mid' === $analysis->getCheckpoint() ? 'mediados' : 'cierre';
         $month = (new \DateTime($analysis->getPeriod() . '-01'))->format('F');
 
         return "Tu análisis de {$label} de {$month} está listo";

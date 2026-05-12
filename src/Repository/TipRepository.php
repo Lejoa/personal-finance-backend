@@ -16,36 +16,13 @@ class TipRepository extends ServiceEntityRepository
         parent::__construct($registry, Tip::class);
     }
 
-//    /**
-//     * @return Tip[] Returns an array of Tip objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('t')
-//            ->andWhere('t.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('t.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
-
-//    public function findOneBySomeField($value): ?Tip
-//    {
-//        return $this->createQueryBuilder('t')
-//            ->andWhere('t.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
 
     /**
      * Returns up to $limit tips whose tags field contains at least one of the given tags.
      * Tags are stored as a comma-separated string (e.g. "ahorro,inversión,gastos").
      *
      * @param string[] $tags
+     *
      * @return Tip[]
      */
     public function findByTags(array $tags, int $limit = 3): array

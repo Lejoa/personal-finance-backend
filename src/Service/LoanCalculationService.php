@@ -48,12 +48,12 @@ class LoanCalculationService
     {
         $calc = $this->repository->find($id);
 
-        if ($calc === null) {
-            throw new NotFoundHttpException('Cálculo no encontrado.');
+        if (null === $calc) {
+            throw new NotFoundHttpException('Calculation not found.');
         }
 
         if ($calc->getUser()->getId() !== $user->getId()) {
-            throw new AccessDeniedHttpException('No tienes permiso para eliminar este cálculo.');
+            throw new AccessDeniedHttpException('You do not have permission to delete this calculation.');
         }
 
         $this->entityManager->remove($calc);

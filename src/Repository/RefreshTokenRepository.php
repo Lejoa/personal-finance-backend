@@ -8,20 +8,21 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * Repositorio para la entidad RefreshToken
- * Proporciona métodos para buscar y gestionar tokens de refresco
- * 
+ * Repository for the RefreshToken entity.
+ * Provides methods to look up and manage refresh tokens.
  */
-class RefreshTokenRepository extends ServiceEntityRepository {
-    
-    public function __construct(ManagerRegistry $registry) {
+class RefreshTokenRepository extends ServiceEntityRepository
+{
+    public function __construct(ManagerRegistry $registry)
+    {
         parent::__construct($registry, RefreshToken::class);
     }
 
     /**
-     * Buscar refresh token por su valor
+     * Find a non-expired, non-revoked refresh token by its raw token string.
      */
-    public function findValidToken(string $token): ?RefreshToken {
+    public function findValidToken(string $token): ?RefreshToken
+    {
         return $this->createQueryBuilder('rt')
             ->andWhere('rt.token = :token')
             ->andWhere('rt.expiresAt > :now')
@@ -33,9 +34,10 @@ class RefreshTokenRepository extends ServiceEntityRepository {
     }
 
     /**
-     * Revocar todos los tokens de refresco de un usuario
+     * Bulk-revoke every active refresh token belonging to the given user.
      */
-    public function revokeAllUserTokens(User $user): void {
+    public function revokeAllUserTokens(User $user): void
+    {
         $this->createQueryBuilder('rt')
             ->update()
             ->set('rt.isRevoked', ':isRevoked')
@@ -47,9 +49,10 @@ class RefreshTokenRepository extends ServiceEntityRepository {
     }
 
     /**
-     * Eliminar tokens expirados (para limpieza periódica)
+     * Delete all expired tokens. Intended for periodic housekeeping jobs.
      */
-    public function deleteExpiredTokens(): int {
+    public function deleteExpiredTokens(): int
+    {
         return $this->createQueryBuilder('rt')
             ->delete()
             ->where('rt.expiresAt < :now')
@@ -59,9 +62,10 @@ class RefreshTokenRepository extends ServiceEntityRepository {
     }
 
     /**
-     * Eliminar tokens revocados (para limpieza periódica)
+     * Delete revoked tokens older than the given number of days. Intended for periodic housekeeping jobs.
      */
-    public function deleteOldRevokedTokens(int $daysOld = 15): int {
+    public function deleteOldRevokedTokens(int $daysOld = 15): int
+    {
         $date = new \DateTime();
         $date->modify("-$daysOld days");
 

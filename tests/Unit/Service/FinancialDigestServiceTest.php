@@ -9,7 +9,6 @@ use App\Service\FinancialDigestService;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Contracts\Cache\CacheInterface;
-use Symfony\Contracts\Cache\ItemInterface;
 
 class FinancialDigestServiceTest extends TestCase
 {
@@ -39,7 +38,7 @@ class FinancialDigestServiceTest extends TestCase
         $expectedDigest = ['spending_velocity' => 50000.0];
 
         $this->cache->method('get')
-            ->willReturnCallback(function (string $key, callable $callback) use ($expectedDigest) {
+            ->willReturnCallback(static function (string $key, callable $callback) use ($expectedDigest) {
                 return $expectedDigest;
             });
 
@@ -169,7 +168,7 @@ class FinancialDigestServiceTest extends TestCase
         $user = new User();
         $user->setEmail('test@example.com');
         $user->setName('Test');
-        if ($createdAt !== null) {
+        if (null !== $createdAt) {
             $ref = new \ReflectionProperty(User::class, 'createdAt');
             $ref->setAccessible(true);
             $ref->setValue($user, $createdAt);
@@ -177,6 +176,7 @@ class FinancialDigestServiceTest extends TestCase
         $ref = new \ReflectionProperty(User::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($user, $id);
+
         return $user;
     }
 }

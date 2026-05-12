@@ -89,6 +89,7 @@ abstract class AbstractControllerTestCase extends TestCase
         foreach ($fieldsAndMessages as $field => $message) {
             $list->add(new ConstraintViolation($message, '', [], null, $field, null));
         }
+
         return $list;
     }
 
@@ -104,6 +105,7 @@ abstract class AbstractControllerTestCase extends TestCase
             json_encode($body)
         );
         $request->headers->set('Content-Type', 'application/json');
+
         return $request;
     }
 
@@ -125,13 +127,13 @@ abstract class AbstractControllerTestCase extends TestCase
         $mock->method('getUser')->willReturn($user ?? $this->makeUser());
 
         $mock->method('json')->willReturnCallback(
-            fn ($data, int $status = 200, array $headers = []) => new JsonResponse($data, $status, $headers)
+            static fn ($data, int $status = 200, array $headers = []) => new JsonResponse($data, $status, $headers)
         );
 
-        $mock->method('denyAccessUnlessGranted')->willReturnCallback(function () {});
+        $mock->method('denyAccessUnlessGranted')->willReturnCallback(static function () {});
 
         $mock->method('getParameter')->willReturnCallback(
-            fn (string $name) => $name === 'kernel.environment' ? $environment : null
+            static fn (string $name) => 'kernel.environment' === $name ? $environment : null
         );
 
         return $mock;

@@ -103,7 +103,7 @@ class LoanCalculationControllerTest extends AbstractControllerTestCase
 
         $this->assertSame(200, $response->getStatusCode());
         $data = json_decode($response->getContent(), true);
-        $this->assertStringContainsString('eliminado', $data['message']);
+        $this->assertStringContainsString('deleted', $data['message']);
     }
 
     public function testDeleteReturns404WhenNotFound(): void

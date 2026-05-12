@@ -33,7 +33,8 @@ class TransactionRepository extends ServiceEntityRepository
     }
 
     /**
-     * Find transactions with filters: type, date range and limit
+     * Find transactions with filters: type, date range and limit.
+     *
      * @return Transaction[]
      */
     public function findByFilters(
@@ -50,27 +51,27 @@ class TransactionRepository extends ServiceEntityRepository
             ->orderBy('t.date', 'DESC')
             ->addOrderBy('t.createdAt', 'DESC');
 
-        if ($type !== null) {
+        if (null !== $type) {
             $qb->andWhere('t.type = :type')
                ->setParameter('type', $type);
         }
 
-        if ($startDate !== null) {
+        if (null !== $startDate) {
             $qb->andWhere('t.date >= :startDate')
                ->setParameter('startDate', $startDate);
         }
 
-        if ($endDate !== null) {
+        if (null !== $endDate) {
             $qb->andWhere('t.date <= :endDate')
                ->setParameter('endDate', $endDate);
         }
 
-        if ($synchronized !== null) {
+        if (null !== $synchronized) {
             $qb->andWhere('t.synchronized = :synchronized')
                ->setParameter('synchronized', $synchronized);
         }
 
-        if ($limit !== null) {
+        if (null !== $limit) {
             $qb->setMaxResults($limit);
         }
 
@@ -78,8 +79,8 @@ class TransactionRepository extends ServiceEntityRepository
     }
 
     /**
-     * Busca una transacción existente por nota exacta para un usuario.
-     * Usado para deduplicación de SMS: el cuerpo del SMS es único por evento bancario.
+     * Find an existing transaction by exact note match for the given user.
+     * Used for SMS deduplication: the SMS body is unique per banking event.
      */
     public function findExistingByNote(User $user, string $note): ?Transaction
     {
@@ -123,14 +124,14 @@ class TransactionRepository extends ServiceEntityRepository
         ";
 
         $rows = $conn->fetchAllAssociative($sql, [
-            'userId'     => $user->getId(),
+            'userId' => $user->getId(),
             'categoryId' => $categoryId,
-            'startDate'  => $startDate->format('Y-m-d'),
-            'endDate'    => $endDate->format('Y-m-d'),
+            'startDate' => $startDate->format('Y-m-d'),
+            'endDate' => $endDate->format('Y-m-d'),
         ]);
 
         return array_map(
-            fn($row) => ['month' => $row['month'], 'total' => (float) $row['total']],
+            static fn ($row) => ['month' => $row['month'], 'total' => (float) $row['total']],
             $rows
         );
     }
@@ -216,12 +217,12 @@ class TransactionRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
 
-        $income   = 0.0;
+        $income = 0.0;
         $expenses = 0.0;
         foreach ($rows as $row) {
-            if ($row['type'] === 'ingreso') {
+            if ('ingreso' === $row['type']) {
                 $income = (float) $row['total'];
-            } elseif ($row['type'] === 'gasto') {
+            } elseif ('gasto' === $row['type']) {
                 $expenses = (float) $row['total'];
             }
         }
@@ -256,7 +257,7 @@ class TransactionRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
 
-        return array_map(fn($row) => ['id' => $row['id'], 'name' => $row['name']], $rows);
+        return array_map(static fn ($row) => ['id' => $row['id'], 'name' => $row['name']], $rows);
     }
 
     /**
@@ -277,15 +278,15 @@ class TransactionRepository extends ServiceEntityRepository
         ";
 
         $startDate = new \DateTime("first day of -{$monthsBack} months");
-        $endDate   = new \DateTime('first day of this month');
+        $endDate = new \DateTime('first day of this month');
 
         $rows = $conn->fetchAllAssociative($sql, [
-            'userId'    => $user->getId(),
+            'userId' => $user->getId(),
             'startDate' => $startDate->format('Y-m-d'),
-            'endDate'   => $endDate->format('Y-m-d'),
+            'endDate' => $endDate->format('Y-m-d'),
         ]);
 
-        return count(array_filter($rows, fn($r) => (int) $r['tx_count'] >= $minTransactions));
+        return \count(array_filter($rows, static fn ($r) => (int) $r['tx_count'] >= $minTransactions));
     }
 
     /**
@@ -311,9 +312,9 @@ class TransactionRepository extends ServiceEntityRepository
         $totalIncome = 0.0;
         $totalExpenses = 0.0;
         foreach ($totals as $row) {
-            if ($row['type'] === 'ingreso') {
+            if ('ingreso' === $row['type']) {
                 $totalIncome = (float) $row['total'];
-            } elseif ($row['type'] === 'gasto') {
+            } elseif ('gasto' === $row['type']) {
                 $totalExpenses = (float) $row['total'];
             }
         }
@@ -334,7 +335,7 @@ class TransactionRepository extends ServiceEntityRepository
             ->getResult();
 
         $topExpenseCategories = array_map(
-            fn($row) => mb_strtolower($row['name']),
+            static fn ($row) => mb_strtolower($row['name']),
             $topCategories
         );
 

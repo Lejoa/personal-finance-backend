@@ -220,8 +220,8 @@ class BudgetServiceTest extends TestCase
         $budget->addBudgetCategory($bc);
 
         $removedEntities = [];
-        $this->em->method('remove')->willReturnCallback(function ($entity) use (&$removedEntities) {
-            $removedEntities[] = get_class($entity);
+        $this->em->method('remove')->willReturnCallback(static function ($entity) use (&$removedEntities) {
+            $removedEntities[] = $entity::class;
         });
 
         $this->service->removeBudgetCategory($bc);
@@ -324,6 +324,7 @@ class BudgetServiceTest extends TestCase
         $ref = new \ReflectionProperty(User::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($user, $id);
+
         return $user;
     }
 
@@ -335,6 +336,7 @@ class BudgetServiceTest extends TestCase
         $ref = new \ReflectionProperty(Category::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($c, $id);
+
         return $c;
     }
 
@@ -345,6 +347,7 @@ class BudgetServiceTest extends TestCase
         $ref = new \ReflectionProperty(Budget::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($b, $id);
+
         return $b;
     }
 
@@ -354,6 +357,7 @@ class BudgetServiceTest extends TestCase
         $bc->setBudget($budget ?? $this->makeBudget());
         $bc->setCategory($category ?? $this->makeCategory());
         $bc->setAmount($amount);
+
         return $bc;
     }
 }

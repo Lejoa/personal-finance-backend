@@ -189,6 +189,7 @@ class CategoryServiceTest extends TestCase
         $ref = new \ReflectionProperty(Category::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($c, $id);
+
         return $c;
     }
 }

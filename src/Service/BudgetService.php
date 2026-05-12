@@ -38,9 +38,7 @@ class BudgetService
             $category = $this->categoryRepository->find($categoryData['categoryId']);
 
             if (!$category) {
-                throw new \InvalidArgumentException(
-                    "Category with ID {$categoryData['categoryId']} does not exist."
-                );
+                throw new \InvalidArgumentException("Category with ID {$categoryData['categoryId']} does not exist.");
             }
 
             $budgetCategory = new BudgetCategory();
@@ -64,7 +62,7 @@ class BudgetService
      */
     public function updateBudget(Budget $budget, UpdateBudgetRequest $dto): Budget
     {
-        if ($dto->startDate !== null) {
+        if (null !== $dto->startDate) {
             try {
                 $budget->setStartDate(new \DateTime($dto->startDate));
             } catch (\Exception) {
@@ -72,7 +70,7 @@ class BudgetService
             }
         }
 
-        if ($dto->endDate !== null) {
+        if (null !== $dto->endDate) {
             try {
                 $budget->setEndDate(new \DateTime($dto->endDate));
             } catch (\Exception) {
@@ -80,7 +78,7 @@ class BudgetService
             }
         }
 
-        if ($dto->categories !== null) {
+        if (null !== $dto->categories) {
             foreach ($budget->getBudgetCategories() as $budgetCategory) {
                 $budget->removeBudgetCategory($budgetCategory);
                 $this->entityManager->remove($budgetCategory);
@@ -90,9 +88,7 @@ class BudgetService
                 $category = $this->categoryRepository->find($categoryData['categoryId']);
 
                 if (!$category) {
-                    throw new \InvalidArgumentException(
-                        "Category with ID {$categoryData['categoryId']} does not exist."
-                    );
+                    throw new \InvalidArgumentException("Category with ID {$categoryData['categoryId']} does not exist.");
                 }
 
                 $budgetCategory = new BudgetCategory();
@@ -184,18 +180,18 @@ class BudgetService
      */
     public function buildFormativeFeedback(BudgetCategory $budgetCategory): string
     {
-        $categoryName    = $budgetCategory->getCategory()->getName();
-        $newLimit        = $budgetCategory->getAmount();
+        $categoryName = $budgetCategory->getCategory()->getName();
+        $newLimit = $budgetCategory->getAmount();
         $previousAmounts = $this->budgetCategoryRepository->getPreviousBudgetAmounts($budgetCategory, 3);
 
         if (empty($previousAmounts)) {
-            return sprintf(FeedbackMessages::BUDGET_FIRST_TIME, $categoryName);
+            return \sprintf(FeedbackMessages::BUDGET_FIRST_TIME, $categoryName);
         }
 
-        $average = array_sum($previousAmounts) / count($previousAmounts);
+        $average = array_sum($previousAmounts) / \count($previousAmounts);
 
         if ($newLimit < $average) {
-            return sprintf(
+            return \sprintf(
                 FeedbackMessages::BUDGET_BELOW_AVERAGE,
                 $this->formatCOP($newLimit),
                 $categoryName,
@@ -203,7 +199,7 @@ class BudgetService
             );
         }
 
-        return sprintf(
+        return \sprintf(
             FeedbackMessages::BUDGET_ABOVE_AVERAGE,
             $this->formatCOP($newLimit),
             $categoryName,

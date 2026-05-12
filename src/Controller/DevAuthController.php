@@ -46,7 +46,7 @@ class DevAuthController extends AbstractController
             $errors = $this->validator->validate($dto);
             if (\count($errors) > 0) {
                 return $this->json(
-                    ['error' => 'Validación fallida', 'violations' => $this->formatErrors($errors)],
+                    ['error' => 'Validation failed', 'violations' => $this->formatErrors($errors)],
                     Response::HTTP_BAD_REQUEST
                 );
             }

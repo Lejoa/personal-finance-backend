@@ -112,8 +112,8 @@ class User implements UserInterface
     }
 
     /**
-     * Retorna el identificador único del usuario (requerido por UserInterface)
-     * Usamos el email como identificador principal.
+     * Returns the unique identifier for this user (required by UserInterface).
+     * Email is used as the primary identifier.
      */
     public function getUserIdentifier(): string
     {
@@ -121,11 +121,10 @@ class User implements UserInterface
     }
 
     /**
-     * Este método se llama después de la autenticación para limpiar datos sensibles
-     * Como usamos OAuth, no tenemos contraseñas que limpiar.
+     * Called after authentication to clear any temporary sensitive data.
+     * No-op here because the app uses OAuth and never stores raw credentials.
      */
     public function eraseCredentials(): void
     {
-        // No hay datos sensibles que limpiar
     }
 }

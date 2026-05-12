@@ -120,6 +120,7 @@ class LoanCalculationServiceTest extends TestCase
         $ref = new \ReflectionProperty(User::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($user, $id);
+
         return $user;
     }
 
@@ -139,6 +140,7 @@ class LoanCalculationServiceTest extends TestCase
         $ref = new \ReflectionProperty(LoanCalculation::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($calc, $id);
+
         return $calc;
     }
 
@@ -154,6 +156,7 @@ class LoanCalculationServiceTest extends TestCase
         $dto->periodicPayment = 1_500_000.0;
         $dto->totalInterest = 80_000_000.0;
         $dto->totalPaid = 180_000_000.0;
+
         return $dto;
     }
 }

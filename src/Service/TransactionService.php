@@ -30,9 +30,9 @@ class TransactionService
      */
     public function createTransaction(CreateTransactionRequest $dto, User $user): Transaction
     {
-        if ($dto->source === 'sms' && !empty($dto->note)) {
+        if ('sms' === $dto->source && !empty($dto->note)) {
             $existing = $this->transactionRepository->findExistingByNote($user, $dto->note);
-            if ($existing !== null) {
+            if (null !== $existing) {
                 return $existing;
             }
         }
@@ -69,7 +69,7 @@ class TransactionService
     {
         $dto->applyTo($transaction);
 
-        if ($dto->categoryId !== null) {
+        if (null !== $dto->categoryId) {
             $category = $this->categoryRepository->find($dto->categoryId);
             if ($category) {
                 $transaction->setCategory($category);
@@ -107,7 +107,7 @@ class TransactionService
         ?string $synchronized = null
     ): array {
         $start = $startDate ? new \DateTime($startDate) : null;
-        $end   = $endDate   ? new \DateTime($endDate)   : null;
+        $end = $endDate ? new \DateTime($endDate) : null;
 
         return $this->transactionRepository->findByFilters(
             $user,
@@ -136,11 +136,12 @@ class TransactionService
     public function buildFormativeFeedback(Transaction $transaction, User $user): ?string
     {
         $category = $transaction->getCategory();
-        $amount   = $transaction->getAmount();
+        $amount = $transaction->getAmount();
 
-        if ($transaction->getType() === 'ingreso') {
+        if ('ingreso' === $transaction->getType()) {
             $totalIncome = $this->transactionRepository->getCurrentMonthIncome($user);
-            return sprintf(
+
+            return \sprintf(
                 FeedbackMessages::INCOME_REGISTERED,
                 $this->formatCOP($amount),
                 $this->formatCOP($totalIncome)
@@ -151,21 +152,21 @@ class TransactionService
             return FeedbackMessages::EXPENSE_NO_CATEGORY;
         }
 
-        $categoryId   = $category->getId();
+        $categoryId = $category->getId();
         $categoryName = $category->getName();
 
-        $history            = $this->transactionRepository->getMonthlyCategorySpending($user, $categoryId, 3);
-        $currentMonthTotal  = $this->transactionRepository->getCurrentMonthCategorySpending($user, $categoryId);
+        $history = $this->transactionRepository->getMonthlyCategorySpending($user, $categoryId, 3);
+        $currentMonthTotal = $this->transactionRepository->getCurrentMonthCategorySpending($user, $categoryId);
 
         if (empty($history)) {
-            return sprintf(FeedbackMessages::EXPENSE_FIRST_TIME, $categoryName);
+            return \sprintf(FeedbackMessages::EXPENSE_FIRST_TIME, $categoryName);
         }
 
-        $average = array_sum(array_column($history, 'total')) / count($history);
-        $delta   = $average > 0 ? (($currentMonthTotal - $average) / $average) : 0;
+        $average = array_sum(array_column($history, 'total')) / \count($history);
+        $delta = $average > 0 ? (($currentMonthTotal - $average) / $average) : 0;
 
         if ($delta < -0.1) {
-            return sprintf(
+            return \sprintf(
                 FeedbackMessages::EXPENSE_BELOW_AVERAGE,
                 $this->formatCOP($currentMonthTotal),
                 $categoryName,
@@ -174,7 +175,7 @@ class TransactionService
         }
 
         if ($delta <= 0.2) {
-            return sprintf(
+            return \sprintf(
                 FeedbackMessages::EXPENSE_ON_TRACK,
                 $categoryName,
                 $this->formatCOP($currentMonthTotal),
@@ -182,7 +183,7 @@ class TransactionService
             );
         }
 
-        return sprintf(
+        return \sprintf(
             FeedbackMessages::EXPENSE_ABOVE_AVERAGE,
             $this->formatCOP($currentMonthTotal),
             $categoryName,

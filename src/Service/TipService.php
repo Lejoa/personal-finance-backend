@@ -95,18 +95,18 @@ class TipService
     {
         $summary = $this->transactionRepository->getUserFinancialSummary($user);
 
-        $income        = $summary['total_income'];
-        $expenses      = $summary['total_expenses'];
+        $income = $summary['total_income'];
+        $expenses = $summary['total_expenses'];
         $topCategories = $summary['top_expense_categories'];
 
-        $tags           = $topCategories;
-        $primaryReason  = TipReasonMessages::RECENT_FALLBACK;
+        $tags = $topCategories;
+        $primaryReason = TipReasonMessages::RECENT_FALLBACK;
 
         if ($expenses > $income) {
-            $tags          = array_merge(['ahorro', 'gastos'], $tags);
+            $tags = array_merge(['ahorro', 'gastos'], $tags);
             $primaryReason = TipReasonMessages::HIGH_EXPENSES;
         } elseif ($income > 0 && ($expenses / $income) < 0.5) {
-            $tags[]        = 'inversión';
+            $tags[] = 'inversión';
             $primaryReason = TipReasonMessages::HIGH_SAVINGS;
         }
 
@@ -120,7 +120,7 @@ class TipService
         }
 
         return array_map(
-            fn(Tip $tip) => ['tip' => $tip, 'reason' => TipReasonMessages::RECENT_FALLBACK],
+            static fn (Tip $tip) => ['tip' => $tip, 'reason' => TipReasonMessages::RECENT_FALLBACK],
             $this->tipRepository->findRecent(3)
         );
     }
@@ -128,19 +128,20 @@ class TipService
     /**
      * Attaches a contextual reason string to each tip based on which tag matched.
      *
-     * @param Tip[]    $tips
-     * @param string[] $tags          Full list of tags used for matching
+     * @param Tip[] $tips
+     * @param string[] $tags Full list of tags used for matching
      * @param string[] $topCategories Top expense category names (lowercase)
+     *
      * @return array<int, array{tip: Tip, reason: string}>
      */
     private function attachReasons(array $tips, array $tags, array $topCategories, string $primaryReason): array
     {
-        return array_map(function (Tip $tip) use ($tags, $topCategories, $primaryReason) {
+        return array_map(static function (Tip $tip) use ($topCategories, $primaryReason) {
             $tipTags = array_map('trim', explode(',', $tip->getTags() ?? ''));
 
             foreach ($topCategories as $category) {
-                if (in_array($category, $tipTags, true)) {
-                    return ['tip' => $tip, 'reason' => sprintf(TipReasonMessages::TOP_CATEGORY, ucfirst($category))];
+                if (\in_array($category, $tipTags, true)) {
+                    return ['tip' => $tip, 'reason' => \sprintf(TipReasonMessages::TOP_CATEGORY, ucfirst($category))];
                 }
             }
 

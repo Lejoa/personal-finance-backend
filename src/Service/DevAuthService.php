@@ -18,7 +18,7 @@ class DevAuthService
     }
 
     /**
-     * Generate JWT token for development user
+     * Generate JWT token for development user.
      */
     public function generateDevToken(DevTokenRequest $dto): array
     {
@@ -36,13 +36,13 @@ class DevAuthService
             'user' => [
                 'id' => $user->getId(),
                 'email' => $user->getEmail(),
-                'name' => $user->getName()
-            ]
+                'name' => $user->getName(),
+            ],
         ];
     }
 
     /**
-     * Create a development user
+     * Create a development user.
      */
     private function createDevUser(DevTokenRequest $dto): User
     {
