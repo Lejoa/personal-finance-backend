@@ -40,7 +40,14 @@ jobs:
         run: docker network create finance-network || true
       -
         name: Generate JWT keys
-        run: docker compose run --rm -T php bin/console lexik:jwt:generate-keypair --skip-if-exists
+        env:
+          JWT_PASSPHRASE: change-me-run-openssl-rand-hex-32
+        run: |
+          mkdir -p config/jwt
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 \
+            -pass pass:${JWT_PASSPHRASE} -out config/jwt/private.pem
+          openssl pkey -in config/jwt/private.pem -passin pass:${JWT_PASSPHRASE} \
+            -pubout -out config/jwt/public.pem
       -
         name: Start services
         run: docker compose up --wait --no-build
