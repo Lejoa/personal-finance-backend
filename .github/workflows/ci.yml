@@ -39,6 +39,9 @@ jobs:
         name: Create external network
         run: docker network create finance-network || true
       -
+        name: Generate JWT keys
+        run: docker compose run --rm -T php bin/console lexik:jwt:generate-keypair --skip-if-exists
+      -
         name: Start services
         run: docker compose up --wait --no-build
       -
