@@ -57,7 +57,7 @@ class TransactionExportController extends AbstractController
         $response = new StreamedResponse(static function () use ($transactions) {
             $handle = fopen('php://output', 'w');
             fwrite($handle, "\xEF\xBB\xBF");
-            fputcsv($handle, ['Fecha', 'Nombre', 'Tipo', 'Categoría', 'Monto', 'Nota', 'Fuente']);
+            fputcsv($handle, ['Fecha', 'Nombre', 'Tipo', 'Categoría', 'Monto', 'Nota', 'Fuente'], ',', '"', '\\');
 
             $totalIncome = 0.0;
             $totalExpenses = 0.0;
@@ -71,7 +71,7 @@ class TransactionExportController extends AbstractController
                     $t->getAmount() ?? 0,
                     $t->getNote() ?? '',
                     'sms' === $t->getSource() ? 'SMS' : 'Manual',
-                ]);
+                ], ',', '"', '\\');
 
                 if ('ingreso' === $t->getType()) {
                     $totalIncome += $t->getAmount() ?? 0;
@@ -80,9 +80,9 @@ class TransactionExportController extends AbstractController
                 }
             }
 
-            fputcsv($handle, []);
-            fputcsv($handle, ['', '', '', 'Total ingresos', $totalIncome, '', '']);
-            fputcsv($handle, ['', '', '', 'Total gastos',   $totalExpenses, '', '']);
+            fputcsv($handle, [], ',', '"', '\\');
+            fputcsv($handle, ['', '', '', 'Total ingresos', $totalIncome, '', ''], ',', '"', '\\');
+            fputcsv($handle, ['', '', '', 'Total gastos',   $totalExpenses, '', ''], ',', '"', '\\');
 
             fclose($handle);
         });
