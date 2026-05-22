@@ -14,11 +14,10 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class AuthController extends AbstractController
 {
-    /**
-     * Injects only AuthService — all OAuth, JWT, and token logic lives there.
-     */
     public function __construct(
-        private readonly AuthService $authService
+        private readonly AuthService $authService,
+        private readonly string $frontendUrl,
+        private readonly string $frontendUrlAndroid,
     ) {
     }
 
@@ -53,8 +52,6 @@ final class AuthController extends AbstractController
     #[Route('/auth/google/callback', name: 'auth_google_callback')]
     public function googleCallback(Request $request, ClientRegistry $clientRegistry): RedirectResponse
     {
-        $frontendUrl = $_ENV['FRONTEND_URL'] ?? 'http://localhost:3000';
-
         try {
             $result = $this->authService->handleGoogleCallback($clientRegistry);
 
@@ -62,15 +59,15 @@ final class AuthController extends AbstractController
             $request->getSession()->remove('oauth_client');
 
             $callbackBase = $isAndroidClient
-                ? ($_ENV['FRONTEND_URL_ANDROID'] ?? 'personalfinance://auth/callback')
-                : "$frontendUrl/auth/callback";
+                ? $this->frontendUrlAndroid
+                : "{$this->frontendUrl}/auth/callback";
 
             return new RedirectResponse(
                 "$callbackBase?token={$result['accessToken']}&refreshToken={$result['refreshToken']}"
             );
         } catch (\Exception $e) {
             return new RedirectResponse(
-                "$frontendUrl/login?error=oauth_failed&message=" . urlencode($e->getMessage())
+                "{$this->frontendUrl}/login?error=oauth_failed&message=" . urlencode($e->getMessage())
             );
         }
     }

@@ -5,6 +5,8 @@
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
     llm_service_url: '%env(LLM_SERVICE_URL)%'
+    frontend_url: '%env(FRONTEND_URL)%'
+    frontend_url_android: '%env(FRONTEND_URL_ANDROID)%'
 
 services:
     # default configuration for services in *this* file
@@ -31,3 +33,8 @@ services:
     App\Service\AnalysisService:
         arguments:
             $llmServiceUrl: '%llm_service_url%'
+
+    App\Controller\AuthController:
+        arguments:
+            $frontendUrl: '%frontend_url%'
+            $frontendUrlAndroid: '%frontend_url_android%'
