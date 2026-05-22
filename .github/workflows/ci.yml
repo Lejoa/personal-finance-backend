@@ -68,7 +68,7 @@ jobs:
         run: docker compose exec -T php bin/console doctrine:schema:validate
       -
         name: Run PHPUnit
-        run: docker compose exec -T php bin/phpunit
+        run: docker compose exec -T php vendor/bin/phpunit
       -
         name: Security audit
         run: docker compose exec -T php composer audit
