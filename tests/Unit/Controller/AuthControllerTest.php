@@ -22,7 +22,11 @@ class AuthControllerTest extends TestCase
     protected function setUp(): void
     {
         $this->authService = $this->createMock(AuthService::class);
-        $this->controller = new AuthController($this->authService);
+        $this->controller = new AuthController(
+            $this->authService,
+            'http://localhost:4200',
+            'personalfinance://auth/callback',
+        );
         $this->injectContainer($this->controller, null);
     }
 
