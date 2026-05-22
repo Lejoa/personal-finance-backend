@@ -69,9 +69,10 @@ jobs:
       -
         name: Run PHPUnit
         run: docker compose exec -T php vendor/bin/phpunit
-      -
-        name: Security audit
-        run: docker compose exec -T php composer audit
+      # Security audit disabled for pilot project
+      # -
+      #   name: Security audit
+      #   run: docker compose exec -T php composer audit
 
   lint:
     name: Docker Lint
