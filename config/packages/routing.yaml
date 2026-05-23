@@ -10,3 +10,4 @@ when@prod:
     framework:
         router:
             strict_requirements: null
+            default_uri: '%env(APP_BASE_URL)%'
