@@ -97,4 +97,5 @@ RUN set -eux; \
 	composer dump-autoload --classmap-authoritative --no-dev; \
 	composer dump-env prod; \
 	composer run-script --no-dev post-install-cmd; \
-	chmod +x bin/console; sync;
+	chmod +x bin/console; sync; \
+	php -r 'file_put_contents(".env.local.php", "<?php return array_diff_key(require \".env.local.php\", [\"APP_BASE_URL\"=>1]);");'
