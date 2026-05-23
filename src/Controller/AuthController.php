@@ -18,6 +18,7 @@ final class AuthController extends AbstractController
         private readonly AuthService $authService,
         private readonly string $frontendUrl,
         private readonly string $frontendUrlAndroid,
+        private readonly string $appBaseUrl,
     ) {
     }
 
@@ -36,9 +37,11 @@ final class AuthController extends AbstractController
             $request->getSession()->set('oauth_client', 'android');
         }
 
+        $redirectUri = rtrim($this->appBaseUrl, '/') . '/auth/google/callback';
+
         return $clientRegistry
             ->getClient('google')
-            ->redirect(['openid', 'email', 'profile'], []);
+            ->redirect(['openid', 'email', 'profile'], ['redirect_uri' => $redirectUri]);
     }
 
     /**
