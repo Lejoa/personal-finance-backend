@@ -43,26 +43,13 @@ jobs:
     needs: build-and-push
     steps:
       -
-        name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            set -e
-            cd /opt/finance-app/personal-finance-infra
-
-            # Write JWT keys from GitHub secrets (stored as base64)
-            mkdir -p ../personal-finance-backend/config/jwt
-            echo "${{ secrets.JWT_PRIVATE_KEY }}" | base64 -d > ../personal-finance-backend/config/jwt/private.pem
-            echo "${{ secrets.JWT_PUBLIC_KEY }}"  | base64 -d > ../personal-finance-backend/config/jwt/public.pem
-            chmod 600 ../personal-finance-backend/config/jwt/private.pem
-
-            # Pull latest image and recreate only the backend container
-            docker compose -f docker-compose.prod.yml --env-file .env.prod pull php
-            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --no-deps php
-
-            # Run pending migrations
-            docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T php \
-              bin/console doctrine:migrations:migrate --no-interaction --all-or-nothing
+        name: Debug SSH connection
+        run: |
+          echo "${{ secrets.VPS_SSH_KEY }}" > /tmp/test_key
+          chmod 600 /tmp/test_key
+          ssh -v -i /tmp/test_key \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "echo SSH_OK && whoami"
+          rm /tmp/test_key
