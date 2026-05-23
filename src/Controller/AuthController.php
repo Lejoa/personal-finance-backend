@@ -39,6 +39,8 @@ final class AuthController extends AbstractController
 
         $redirectUri = rtrim($this->appBaseUrl, '/') . '/auth/google/callback';
 
+        error_log('DEBUG appBaseUrl=' . $this->appBaseUrl . ' redirectUri=' . $redirectUri);
+
         return $clientRegistry
             ->getClient('google')
             ->redirect(['openid', 'email', 'profile'], ['redirect_uri' => $redirectUri]);
