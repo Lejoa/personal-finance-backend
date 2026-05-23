@@ -38,3 +38,7 @@ services:
         arguments:
             $frontendUrl: '%frontend_url%'
             $frontendUrlAndroid: '%frontend_url_android%'
+
+    App\EventSubscriber\RequestContextSubscriber:
+        arguments:
+            $appBaseUrl: '%env(APP_BASE_URL)%'

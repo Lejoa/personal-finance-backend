@@ -11,8 +11,3 @@ when@prod:
         router:
             strict_requirements: null
             default_uri: '%env(APP_BASE_URL)%'
-
-    parameters:
-        router.request_context.host: '%env(APP_HOST)%'
-        router.request_context.scheme: 'https'
-        router.request_context.base_url: ''
