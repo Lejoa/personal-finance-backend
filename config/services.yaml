@@ -7,6 +7,7 @@ parameters:
     llm_service_url: '%env(LLM_SERVICE_URL)%'
     frontend_url: '%env(FRONTEND_URL)%'
     frontend_url_android: '%env(FRONTEND_URL_ANDROID)%'
+    app_base_url: '%env(APP_BASE_URL)%'
 
 services:
     # default configuration for services in *this* file
@@ -38,8 +39,8 @@ services:
         arguments:
             $frontendUrl: '%frontend_url%'
             $frontendUrlAndroid: '%frontend_url_android%'
-            $appBaseUrl: '%env(APP_BASE_URL)%'
+            $appBaseUrl: '%app_base_url%'
 
     App\EventSubscriber\RequestContextSubscriber:
         arguments:
-            $appBaseUrl: '%env(APP_BASE_URL)%'
+            $appBaseUrl: '%app_base_url%'
