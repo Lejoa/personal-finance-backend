@@ -18,8 +18,9 @@ final class AuthController extends AbstractController
         private readonly AuthService $authService,
         private readonly string $frontendUrl,
         private readonly string $frontendUrlAndroid,
-        private readonly string $appBaseUrl,
     ) {
+        // APP_BASE_URL se lee en runtime porque en prod el contenedor de servicios
+        // compilado no resuelve variables que no estaban en .env al momento del build.
     }
 
     /**
@@ -37,7 +38,8 @@ final class AuthController extends AbstractController
             $request->getSession()->set('oauth_client', 'android');
         }
 
-        $redirectUri = rtrim($this->appBaseUrl, '/') . '/auth/google/callback';
+        $appBaseUrl = (string) ($_SERVER['APP_BASE_URL'] ?? getenv('APP_BASE_URL') ?: 'https://localhost');
+        $redirectUri = rtrim($appBaseUrl, '/') . '/auth/google/callback';
 
         return $clientRegistry
             ->getClient('google')

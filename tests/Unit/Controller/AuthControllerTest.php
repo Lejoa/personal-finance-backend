@@ -26,7 +26,6 @@ class AuthControllerTest extends TestCase
             $this->authService,
             'http://localhost:4200',
             'personalfinance://auth/callback',
-            'https://localhost',
         );
         $this->injectContainer($this->controller, null);
     }
