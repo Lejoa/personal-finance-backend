@@ -98,4 +98,4 @@ RUN set -eux; \
 	composer dump-env prod; \
 	composer run-script --no-dev post-install-cmd; \
 	chmod +x bin/console; sync; \
-	php frankenphp/strip-env.php
+	php -r 'file_put_contents(".env.local.php", "<?php return " . var_export(array_diff_key(require(".env.local.php"), ["APP_BASE_URL" => 1]), true) . ";");'
