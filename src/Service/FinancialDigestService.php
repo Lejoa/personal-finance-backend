@@ -228,6 +228,8 @@ class FinancialDigestService
         return [
             'spending_velocity' => $spendingVelocity,
             'projected_expenses' => $projectedExpenses,
+            'previous_income' => $prevIncome,
+            'previous_expenses' => $prevExpenses,
             'previous_savings_rate' => $prevSavingsRate,
             'savings_improving' => $savingsImproving,
             'category_trends' => array_values($categoryTrends),

@@ -52,14 +52,14 @@ class AnalysisControllerTest extends AbstractControllerTestCase
         $this->assertArrayHasKey('error', $data);
     }
 
-    public function testShowReturns200AndMarksAsRead(): void
+    public function testShowReturns200WithAnalysisData(): void
     {
-        $user = $this->makeUser();
+        $user     = $this->makeUser();
         $analysis = $this->makeAnalysis(1);
 
         $this->controller->method('getUser')->willReturn($user);
         $this->analysisService->method('findByIdAndUser')->willReturn($analysis);
-        $this->analysisService->expects($this->once())->method('markAsRead')->with($analysis);
+        $this->analysisService->expects($this->never())->method('markAsRead');
 
         $response = $this->controller->show(1);
 
@@ -68,6 +68,36 @@ class AnalysisControllerTest extends AbstractControllerTestCase
         $this->assertArrayHasKey('analysis', $data);
         $this->assertArrayHasKey('period', $data['analysis']);
         $this->assertArrayHasKey('isRead', $data['analysis']);
+    }
+
+    public function testMarkReadReturns200AndCallsMarkAsRead(): void
+    {
+        $user     = $this->makeUser();
+        $analysis = $this->makeAnalysis(1);
+
+        $this->controller->method('getUser')->willReturn($user);
+        $this->analysisService->method('findByIdAndUser')->willReturn($analysis);
+        $this->analysisService->expects($this->once())->method('markAsRead')->with($analysis);
+
+        $response = $this->controller->markRead(1);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $data = json_decode($response->getContent(), true);
+        $this->assertArrayHasKey('analysis', $data);
+        $this->assertArrayHasKey('period', $data['analysis']);
+        $this->assertArrayHasKey('isRead', $data['analysis']);
+    }
+
+    public function testMarkReadReturns404WhenNotFound(): void
+    {
+        $user = $this->makeUser();
+        $this->controller->method('getUser')->willReturn($user);
+        $this->analysisService->method('findByIdAndUser')->willReturn(null);
+        $this->analysisService->expects($this->never())->method('markAsRead');
+
+        $response = $this->controller->markRead(99);
+
+        $this->assertSame(404, $response->getStatusCode());
     }
 
     public function testShowReturns404WhenNotFound(): void

@@ -113,9 +113,10 @@ class ChatControllerTest extends AbstractControllerTestCase
     {
         $user = $this->makeUser();
         $this->controller->method('getUser')->willReturn($user);
+        // getUserConversations now returns [{conversation, messageCount}] rows
         $this->chatService->method('getUserConversations')->willReturn([
-            $this->makeConversation(1),
-            $this->makeConversation(2),
+            ['conversation' => $this->makeConversation(1), 'messageCount' => 3],
+            ['conversation' => $this->makeConversation(2), 'messageCount' => 7],
         ]);
 
         $response = $this->controller->conversations();
@@ -124,6 +125,7 @@ class ChatControllerTest extends AbstractControllerTestCase
         $data = json_decode($response->getContent(), true);
         $this->assertSame(2, $data['total']);
         $this->assertCount(2, $data['data']);
+        $this->assertArrayHasKey('messageCount', $data['data'][0]);
     }
 
     public function testGetConversationReturns200WithMessages(): void
@@ -131,20 +133,27 @@ class ChatControllerTest extends AbstractControllerTestCase
         $user = $this->makeUser();
         $this->controller->method('getUser')->willReturn($user);
         $this->chatService->method('getConversation')->willReturn($this->makeConversation(5));
+        // getConversationMessages is called with pagination params
+        $this->chatService->method('getConversationMessages')->willReturn([
+            'messages' => [],
+            'total'    => 0,
+        ]);
 
-        $response = $this->controller->getConversation(5);
+        // getConversation now requires a Request for pagination query params
+        $response = $this->controller->getConversation(5, $this->makeRequest());
 
         $this->assertSame(200, $response->getStatusCode());
         $data = json_decode($response->getContent(), true);
         $this->assertArrayHasKey('conversation', $data);
         $this->assertArrayHasKey('messages', $data);
+        $this->assertArrayHasKey('pagination', $data);
     }
 
     public function testGetConversationReturns404WhenNotFound(): void
     {
         $this->chatService->method('getConversation')->willReturn(null);
 
-        $response = $this->controller->getConversation(99);
+        $response = $this->controller->getConversation(99, $this->makeRequest());
 
         $this->assertSame(404, $response->getStatusCode());
         $data = json_decode($response->getContent(), true);

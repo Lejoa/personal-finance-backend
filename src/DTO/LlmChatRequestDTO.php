@@ -11,7 +11,9 @@ class LlmChatRequestDTO
         public readonly array $categories,
         public readonly array $budgets,
         public readonly string $additionalContext = '',
-        public readonly string $contextType = 'none'
+        public readonly string $contextType = 'none',
+        public readonly array $conversationHistory = [],
+        public readonly array $availableCategories = [],
     ) {
     }
 
@@ -25,6 +27,8 @@ class LlmChatRequestDTO
             'budgets' => $this->budgets,
             'additional_context' => $this->additionalContext,
             'context_type' => $this->contextType,
+            'conversation_history' => $this->conversationHistory,
+            'available_categories' => $this->availableCategories,
         ];
     }
 }

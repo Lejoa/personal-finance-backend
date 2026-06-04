@@ -52,11 +52,31 @@ class AnalysisController extends AbstractController
     /**
      * Returns a single financial analysis by ID for the authenticated user.
      * Uses a direct user-scoped repository lookup — avoids loading the full collection.
-     * Marks the analysis as read after a successful fetch.
      * Returns 404 if the analysis does not exist or belongs to a different user.
      */
     #[Route('/{id}', name: 'api_analysis_show', methods: ['GET'])]
     public function show(int $id): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        $analysis = $this->analysisService->findByIdAndUser($id, $user);
+
+        if (null === $analysis) {
+            return $this->json(
+                ['error' => 'Analysis not found'],
+                Response::HTTP_NOT_FOUND
+            );
+        }
+
+        return $this->json(['analysis' => $this->serializeAnalysis($analysis)]);
+    }
+
+    /**
+     * Marks a single financial analysis as read for the authenticated user.
+     * Returns 404 if the analysis does not exist or belongs to a different user.
+     */
+    #[Route('/{id}/read', name: 'api_analysis_mark_read', methods: ['PATCH'])]
+    public function markRead(int $id): JsonResponse
     {
         /** @var User $user */
         $user = $this->getUser();

@@ -345,4 +345,110 @@ class TransactionRepository extends ServiceEntityRepository
             'top_expense_categories' => $topExpenseCategories,
         ];
     }
+
+    /**
+     * Returns income, expenses and savings rate aggregated by month for an arbitrary range.
+     *
+     * $from and $to are YYYY-MM strings already validated by PeriodHint before reaching here.
+     * Lexicographic comparison works correctly with this format, so BETWEEN is safe.
+     *
+     * Uses raw SQL (as getMonthlyCategorySpending and countConsistentMonths do) because
+     * TO_CHAR(date, 'YYYY-MM') is not available in Doctrine DQL without an extension.
+     *
+     * @return array<int, array{month: string, income: float, expenses: float, savings_rate: float}>
+     */
+    public function getMonthlyTotalsForRange(User $user, string $from, string $to): array
+    {
+        $conn = $this->getEntityManager()->getConnection();
+
+        $sql = "
+            SELECT
+                TO_CHAR(t.date, 'YYYY-MM') AS month,
+                SUM(CASE WHEN t.type = 'ingreso' THEN t.amount ELSE 0 END)::float AS income,
+                SUM(CASE WHEN t.type = 'gasto'   THEN t.amount ELSE 0 END)::float AS expenses
+            FROM transactions t
+            WHERE t.user_id = :userId
+              AND TO_CHAR(t.date, 'YYYY-MM') >= :from
+              AND TO_CHAR(t.date, 'YYYY-MM') <= :to
+            GROUP BY TO_CHAR(t.date, 'YYYY-MM')
+            ORDER BY month ASC
+        ";
+
+        $rows = $conn->fetchAllAssociative($sql, [
+            'userId' => $user->getId(),
+            'from'   => $from,
+            'to'     => $to,
+        ]);
+
+        return array_map(function (array $row): array {
+            $income   = (float) $row['income'];
+            $expenses = (float) $row['expenses'];
+            $savings  = $income > 0
+                ? round((($income - $expenses) / $income) * 100, 1)
+                : 0.0;
+
+            return [
+                'month'        => $row['month'],
+                'income'       => $income,
+                'expenses'     => $expenses,
+                'savings_rate' => $savings,
+            ];
+        }, $rows);
+    }
+
+    /**
+     * Returns expenses by category and month for an arbitrary range.
+     *
+     * Optionally filters by category name using ILIKE for case-insensitive matching,
+     * tolerating capitalisation variations the LLM may produce.
+     * user_id is always applied first to leverage the index on the date column.
+     *
+     * @return array<int, array{month: string, category: string, total: float}>
+     */
+    public function getMonthlyCategorySpendingForRange(
+        User $user,
+        string $from,
+        string $to,
+        ?string $categoryName = null,
+    ): array {
+        $conn   = $this->getEntityManager()->getConnection();
+        $params = [
+            'userId' => $user->getId(),
+            'from'   => $from,
+            'to'     => $to,
+        ];
+
+        $categoryFilter = '';
+        if (null !== $categoryName) {
+            $categoryFilter        = 'AND c.name ILIKE :categoryName';
+            $params['categoryName'] = '%' . $categoryName . '%';
+        }
+
+        $sql = "
+            SELECT
+                TO_CHAR(t.date, 'YYYY-MM') AS month,
+                c.name AS category,
+                SUM(t.amount)::float AS total
+            FROM transactions t
+            INNER JOIN categories c ON t.category_id = c.id
+            WHERE t.user_id = :userId
+              AND t.type = 'gasto'
+              AND TO_CHAR(t.date, 'YYYY-MM') >= :from
+              AND TO_CHAR(t.date, 'YYYY-MM') <= :to
+              {$categoryFilter}
+            GROUP BY TO_CHAR(t.date, 'YYYY-MM'), c.name
+            ORDER BY month ASC, total DESC
+        ";
+
+        $rows = $conn->fetchAllAssociative($sql, $params);
+
+        return array_map(
+            static fn (array $row): array => [
+                'month'    => $row['month'],
+                'category' => $row['category'],
+                'total'    => (float) $row['total'],
+            ],
+            $rows,
+        );
+    }
 }

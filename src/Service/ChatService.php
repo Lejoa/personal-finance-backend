@@ -13,6 +13,7 @@ use App\Entity\Transaction;
 use App\Entity\User;
 use App\Repository\CategoryRepository;
 use App\Repository\ChatConversationRepository;
+use App\ValueObject\PeriodHint;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -39,7 +40,27 @@ class ChatService
      */
     public function processMessage(ChatRequestDTO $dto, User $user): ChatResponseDTO
     {
-        $conversation = $this->getOrCreateConversation($dto, $user);
+        // Build the category catalogue once — reused by both the classifier (so it can
+        // normalize user synonyms in period_hint.category) and the chat LLM request.
+        $availableCategories = array_map(
+            static fn (Category $cat) => $cat->getName(),
+            $this->categoryRepository->findAll()
+        );
+
+        // Classify before creating the conversation so the title can use context_type
+        $classification = $this->classifyContextNeeds($dto->message, $availableCategories);
+        $contextType    = $classification['context_type'];
+        $periodHint     = PeriodHint::fromArray($classification['period_hint']);
+
+        if (null !== $classification['period_hint'] && null === $periodHint) {
+            $this->logger->warning('Classifier returned invalid PeriodHint — using compact snapshot fallback', [
+                'raw_period_hint' => $classification['period_hint'],
+                'message'         => $dto->message,
+                'context_type'    => $contextType,
+            ]);
+        }
+
+        $conversation = $this->getOrCreateConversation($dto, $user, $contextType);
 
         $userMessage = new ChatMessage();
         $userMessage->setContent($dto->message);
@@ -50,9 +71,34 @@ class ChatService
         $this->entityManager->persist($userMessage);
         $this->entityManager->flush();
 
-        $context = $this->contextService->buildContext($user);
-        $contextType = $this->classifyContextNeeds($dto->message);
-        $additionalContext = $this->contextService->buildAdditionalContext($user, $contextType);
+        // If the classifier found no period in the current message, check whether this
+        // is a follow-up to a recent historical query and inherit that period if so.
+        // $contextType is passed by reference — it may be updated to 'historical'.
+        $periodHintBeforeResolve = $periodHint;
+        $contextTypeBeforeResolve = $contextType;
+        $periodHint = $this->resolveEffectivePeriodHint($periodHint, $conversation, $contextType);
+
+        $this->logger->info('resolveEffectivePeriodHint result', [
+            'message'                  => mb_substr($dto->message, 0, 80),
+            'context_type_before'      => $contextTypeBeforeResolve,
+            'context_type_after'       => $contextType,
+            'classified_hint'          => $periodHintBeforeResolve ? [
+                'from' => $periodHintBeforeResolve->fromMonth,
+                'to'   => $periodHintBeforeResolve->toMonth,
+            ] : null,
+            'resolved_hint'            => $periodHint ? [
+                'from' => $periodHint->fromMonth,
+                'to'   => $periodHint->toMonth,
+            ] : null,
+            'assistant_messages_count' => \count(array_filter(
+                $conversation->getMessages()->toArray(),
+                static fn (ChatMessage $m) => 'assistant' === $m->getRole()
+            )),
+        ]);
+
+        $context             = $this->contextService->buildContext($user);
+        $additionalContext   = $this->contextService->buildAdditionalContext($user, $contextType, $periodHint);
+        $conversationHistory = $this->buildConversationHistory($conversation);
 
         $llmRequest = new LlmChatRequestDTO(
             message: $dto->message,
@@ -61,7 +107,9 @@ class ChatService
             categories: $context['categories'],
             budgets: $context['budgets'],
             additionalContext: $additionalContext,
-            contextType: $contextType
+            contextType: $contextType,
+            conversationHistory: $conversationHistory,
+            availableCategories: $availableCategories,
         );
 
         $llmResponse = $this->callLlmService($llmRequest);
@@ -71,6 +119,16 @@ class ChatService
         if (null !== $transactionAction) {
             $transactionMetadata = $this->processTransactionAction($transactionAction, $user);
             $metadata = array_merge($metadata, $transactionMetadata);
+        }
+
+        // Persist the active period_hint in the assistant message metadata so that
+        // resolveEffectivePeriodHint can inherit it in follow-up turns.
+        if (null !== $periodHint && 'historical' === $contextType) {
+            $metadata['period_hint'] = [
+                'from_month' => $periodHint->fromMonth,
+                'to_month'   => $periodHint->toMonth,
+                'category'   => $periodHint->category,
+            ];
         }
 
         $assistantMessage = new ChatMessage();
@@ -200,22 +258,32 @@ class ChatService
     }
 
     /**
-     * Returns all conversations for the given user.
+     * Returns all conversations for the given user with their message counts.
      *
-     * @return ChatConversation[]
+     * @return array<array{conversation: ChatConversation, messageCount: int}>
      */
     public function getUserConversations(User $user): array
     {
-        return $this->conversationRepository->findByUser($user);
+        return $this->conversationRepository->findByUserWithCount($user);
     }
 
     /**
-     * Returns a conversation with its messages if it belongs to the given user.
+     * Returns a conversation if it belongs to the given user.
      * Returns null if the conversation does not exist or belongs to a different user.
      */
     public function getConversation(int $id, User $user): ?ChatConversation
     {
         return $this->conversationRepository->findOneByIdAndUser($id, $user);
+    }
+
+    /**
+     * Returns a paginated slice of messages for a conversation.
+     *
+     * @return array{messages: ChatMessage[], total: int}
+     */
+    public function getConversationMessages(ChatConversation $conversation, int $page = 1, int $pageSize = 50): array
+    {
+        return $this->conversationRepository->findMessagesPaginated($conversation, $page, $pageSize);
     }
 
     /**
@@ -228,10 +296,90 @@ class ChatService
     }
 
     /**
+     * Builds the conversation history array to send to the LLM service.
+     *
+     * Uses a sliding window of the last CONVERSATION_HISTORY_LIMIT messages
+     * (excluding the user message just added) so the LLM can maintain coherence
+     * across multi-turn conversations without growing the context unboundedly.
+     * The new user message is excluded because it is sent separately as the
+     * main "message" field in the LLM request.
+     */
+    private function buildConversationHistory(ChatConversation $conversation, int $limit = 6): array
+    {
+        $messages = $conversation->getMessages()->toArray();
+
+        // Drop the last message — it is the user message just persisted in this turn
+        if (!empty($messages)) {
+            array_pop($messages);
+        }
+
+        $recent = \array_slice($messages, -$limit);
+
+        return array_map(
+            static fn (ChatMessage $m) => [
+                'role' => $m->getRole(),
+                'content' => $m->getContent(),
+            ],
+            $recent
+        );
+    }
+
+    /**
+     * Resolves the effective PeriodHint for the current turn.
+     *
+     * If the classifier produced a valid PeriodHint from the current message, it is
+     * returned unchanged. Otherwise, the last $lookback assistant messages are inspected
+     * for a saved period_hint in their metadata. If one is found, it is inherited and
+     * $contextType is updated to 'historical' so that buildAdditionalContext executes
+     * the correct historical query.
+     *
+     * This solves follow-up questions where the period is implicit in the conversation
+     * ("dame el detalle", "¿y por categoría?") without modifying the stateless classifier.
+     * Inheritance is intentionally limited to $lookback turns to avoid inheriting stale
+     * periods from unrelated earlier exchanges.
+     */
+    private function resolveEffectivePeriodHint(
+        ?PeriodHint $classifiedHint,
+        ChatConversation $conversation,
+        string &$contextType,
+        int $lookback = 3,
+    ): ?PeriodHint {
+        if (null !== $classifiedHint) {
+            return $classifiedHint;
+        }
+
+        // Do not inherit a historical period for transactions or off-topic messages
+        if (\in_array($contextType, ['transaction', 'none'], true)) {
+            return null;
+        }
+
+        $messages          = $conversation->getMessages()->toArray();
+        $assistantMessages = array_values(
+            array_filter($messages, static fn (ChatMessage $m) => 'assistant' === $m->getRole())
+        );
+        $recent = \array_slice($assistantMessages, -$lookback);
+
+        foreach (array_reverse($recent) as $msg) {
+            $meta = $msg->getMetadata();
+            if (isset($meta['period_hint']['from_month'], $meta['period_hint']['to_month'])) {
+                $inherited = PeriodHint::fromArray($meta['period_hint']);
+                if (null !== $inherited) {
+                    $contextType = 'historical';
+
+                    return $inherited;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Returns an existing conversation matching the DTO's conversationId,
      * or creates and persists a new one if no ID was provided or the ID is not found.
+     * The contextType is used to generate a descriptive title for new conversations.
      */
-    private function getOrCreateConversation(ChatRequestDTO $dto, User $user): ChatConversation
+    private function getOrCreateConversation(ChatRequestDTO $dto, User $user, string $contextType = 'none'): ChatConversation
     {
         if (null !== $dto->conversationId) {
             $conversation = $this->conversationRepository->findOneByIdAndUser($dto->conversationId, $user);
@@ -242,7 +390,7 @@ class ChatService
 
         $conversation = new ChatConversation();
         $conversation->setUser($user);
-        $conversation->setTitle($this->generateTitle($dto->message));
+        $conversation->setTitle($this->generateTitle($dto->message, $contextType));
 
         $this->entityManager->persist($conversation);
         $this->entityManager->flush();
@@ -251,13 +399,26 @@ class ChatService
     }
 
     /**
-     * Generates a conversation title by truncating the first message to 50 characters.
+     * Generates a human-readable conversation title based on the classified context type.
+     *
+     * Using the pre-classified contextType produces consistent, descriptive titles
+     * (e.g. "Consulta de presupuesto") instead of raw message truncations
+     * (e.g. "¿cuánto tengo disponible en mi presup..."), at zero extra cost since
+     * contextType is already available before this method is called.
+     * For transaction and unclassified messages the first 50 chars are used as fallback.
      */
-    private function generateTitle(string $message): string
+    private function generateTitle(string $message, string $contextType = 'none'): string
     {
-        return mb_strlen($message) > 50
-            ? mb_substr($message, 0, 50) . '...'
-            : $message;
+        return match ($contextType) {
+            'budget'     => 'Consulta de presupuesto',
+            'trends'     => 'Análisis de tendencias',
+            'savings'    => 'Consulta de ahorro',
+            'categories' => 'Análisis por categorías',
+            'question'   => 'Consulta financiera',
+            default      => mb_strlen($message) > 50
+                ? mb_substr($message, 0, 50) . '...'
+                : $message,
+        };
     }
 
     /**
@@ -265,13 +426,18 @@ class ChatService
      * Validates safety guardrails (ToxicLanguage + DetectPII) and throws RuntimeException
      * with code 422 if the message is rejected. Falls back to "none" on network errors
      * so the main message flow is never blocked by a classification failure.
+     *
+     * @return array{context_type: string, period_hint: ?array}
      */
-    private function classifyContextNeeds(string $message): string
+    private function classifyContextNeeds(string $message, array $availableCategories = []): array
     {
         try {
             $response = $this->httpClient->request('POST', $this->llmServiceUrl . '/llm/classify-context', [
-                'json' => ['message' => $message],
-                'timeout' => 15,
+                'json'         => [
+                    'message'               => $message,
+                    'available_categories'  => $availableCategories,
+                ],
+                'timeout'      => 15,
                 'max_duration' => 15,
             ]);
 
@@ -282,7 +448,10 @@ class ChatService
 
             $data = $response->toArray();
 
-            return $data['context_type'] ?? 'none';
+            return [
+                'context_type' => $data['context_type'] ?? 'none',
+                'period_hint'  => $data['period_hint'] ?? null,
+            ];
         } catch (\RuntimeException $e) {
             throw $e;
         } catch (\Exception $e) {
@@ -290,7 +459,7 @@ class ChatService
                 'error' => $e->getMessage(),
             ]);
 
-            return 'none';
+            return ['context_type' => 'none', 'period_hint' => null];
         }
     }
 

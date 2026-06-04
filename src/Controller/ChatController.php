@@ -96,17 +96,21 @@ class ChatController extends AbstractController
         $conversations = $this->chatService->getUserConversations($user);
 
         return $this->json([
-            'data' => array_map(fn (ChatConversation $conv) => $this->serializeConversation($conv), $conversations),
+            'data' => array_map(
+                fn (array $row) => $this->serializeConversation($row['conversation'], $row['messageCount']),
+                $conversations
+            ),
             'total' => \count($conversations),
         ]);
     }
 
     /**
-     * Returns a single conversation with all its messages for the authenticated user.
+     * Returns a single conversation with a paginated list of its messages.
+     * Accepts optional query params: page (default 1), pageSize (default 50, max 100).
      * Returns 404 if the conversation does not exist or belongs to a different user.
      */
     #[Route('/conversations/{id}', name: 'api_chat_conversation_show', methods: ['GET'])]
-    public function getConversation(int $id): JsonResponse
+    public function getConversation(int $id, Request $request): JsonResponse
     {
         /** @var User $user */
         $user = $this->getUser();
@@ -116,12 +120,23 @@ class ChatController extends AbstractController
             return $this->json(['error' => 'Conversation not found'], Response::HTTP_NOT_FOUND);
         }
 
+        $page = max(1, (int) $request->query->get('page', 1));
+        $pageSize = min(100, max(1, (int) $request->query->get('pageSize', 50)));
+
+        $result = $this->chatService->getConversationMessages($conversation, $page, $pageSize);
+
         return $this->json([
             'conversation' => $this->serializeConversation($conversation),
             'messages' => array_map(
                 fn (ChatMessage $msg) => $this->serializeMessage($msg),
-                $conversation->getMessages()->toArray()
+                $result['messages']
             ),
+            'pagination' => [
+                'page' => $page,
+                'pageSize' => $pageSize,
+                'total' => $result['total'],
+                'totalPages' => (int) ceil($result['total'] / $pageSize),
+            ],
         ]);
     }
 
@@ -156,14 +171,20 @@ class ChatController extends AbstractController
      * Converts a ChatConversation entity into a plain array for JSON serialization.
      * The response shape is a stable public API contract — do not change field names.
      */
-    private function serializeConversation(ChatConversation $conversation): array
+    private function serializeConversation(ChatConversation $conversation, ?int $messageCount = null): array
     {
-        return [
+        $data = [
             'id' => $conversation->getId(),
             'title' => $conversation->getTitle(),
             'createdAt' => $conversation->getCreatedAt()->format('c'),
             'updatedAt' => $conversation->getUpdatedAt()->format('c'),
         ];
+
+        if (null !== $messageCount) {
+            $data['messageCount'] = $messageCount;
+        }
+
+        return $data;
     }
 
     /**
