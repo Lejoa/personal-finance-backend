@@ -415,6 +415,7 @@ class ChatService
             'savings'    => 'Consulta de ahorro',
             'categories' => 'Análisis por categorías',
             'question'   => 'Consulta financiera',
+            'education'  => 'Educación financiera',
             default      => mb_strlen($message) > 50
                 ? mb_substr($message, 0, 50) . '...'
                 : $message,
