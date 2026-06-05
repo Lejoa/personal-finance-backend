@@ -20,6 +20,12 @@ security:
             pattern: ^/auth
             stateless: false
             security: false
+        # Firewall para endpoints internos servidor-a-servidor (LLM service → backend).
+        # No usa JWT — la autenticación se gestiona con X-Internal-Token en el controller.
+        internal:
+            pattern: ^/internal
+            security: false
+
         # Firewall de la API: stateless porque usa JWT, no sesiones
         main:
             stateless: true
@@ -28,6 +34,9 @@ security:
 
     # Control de acceso
     access_control:
+        # Endpoints internos servidor-a-servidor: acceso público a nivel firewall,
+        # validados con X-Internal-Token directamente en InternalRagController.
+        - { path: ^/internal, roles: PUBLIC_ACCESS }
         # Endpoint de refresh token debe ser público (se llama cuando el JWT expiró)
         - { path: ^/api/token/refresh, roles: PUBLIC_ACCESS }
         # Endpoints de desarrollo (solo disponibles en APP_ENV=dev)

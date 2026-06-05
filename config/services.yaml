@@ -8,6 +8,7 @@ parameters:
     frontend_url: '%env(FRONTEND_URL)%'
     frontend_url_android: '%env(FRONTEND_URL_ANDROID)%'
     app_base_url: '%env(APP_BASE_URL)%'
+    internal_api_token: '%env(INTERNAL_API_TOKEN)%'
 
 services:
     # default configuration for services in *this* file
@@ -34,6 +35,14 @@ services:
     App\Service\AnalysisService:
         arguments:
             $llmServiceUrl: '%llm_service_url%'
+
+    App\Command\IndexTipsCommand:
+        arguments:
+            $llmServiceUrl: '%llm_service_url%'
+
+    App\Controller\InternalRagController:
+        arguments:
+            $internalToken: '%internal_api_token%'
 
     App\Controller\AuthController:
         arguments:
