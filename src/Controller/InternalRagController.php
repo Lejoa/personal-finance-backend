@@ -3,13 +3,14 @@
 namespace App\Controller;
 
 use App\Repository\EmbeddingRepository;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/internal')]
-class InternalRagController
+class InternalRagController extends AbstractController
 {
     public function __construct(
         private readonly EmbeddingRepository $embeddingRepository,

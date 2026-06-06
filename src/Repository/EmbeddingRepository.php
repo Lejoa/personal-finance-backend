@@ -65,10 +65,12 @@ class EmbeddingRepository extends ServiceEntityRepository
         $sql = <<<SQL
             SELECT
                 te.content,
+                t.title       AS tip_title,
                 tr.title      AS source_title,
                 tr.author     AS source_author,
                 1 - (te.embedding <=> :vec::vector) AS similarity
             FROM tip_embeddings te
+            JOIN tips t ON t.id = te.tip_id
             LEFT JOIN tip_references tr ON tr.id = te.reference_id
             ORDER BY te.embedding <=> :vec::vector
             LIMIT :limit
@@ -82,6 +84,7 @@ class EmbeddingRepository extends ServiceEntityRepository
         return array_map(static function (array $row): array {
             return [
                 'content'       => $row['content'],
+                'tip_title'     => $row['tip_title'],
                 'source_title'  => $row['source_title'],
                 'source_author' => $row['source_author'],
                 'similarity'    => (float) $row['similarity'],
