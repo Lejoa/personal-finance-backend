@@ -65,7 +65,9 @@ jobs:
         run: docker compose exec -T php bin/console doctrine:migrations:migrate --no-interaction
       -
         name: Doctrine Schema Validator
-        run: docker compose exec -T php bin/console doctrine:schema:validate
+        # --skip-sync: the DB has pgvector-specific objects (IVFFlat index, COLLATE "C")
+        # that Doctrine cannot represent in entity mappings. Mapping validation still runs.
+        run: docker compose exec -T php bin/console doctrine:schema:validate --skip-sync
       -
         name: Run PHPUnit
         run: docker compose exec -T php vendor/bin/phpunit
