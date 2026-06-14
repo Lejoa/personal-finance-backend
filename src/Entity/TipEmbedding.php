@@ -27,8 +27,7 @@ class TipEmbedding
     #[ORM\Column(type: Types::TEXT)]
     private ?string $content = null;
 
-    // pgvector type — columnDefinition bypasses Doctrine type comparison in schema:validate
-    #[ORM\Column(columnDefinition: 'vector(1536) NULL')]
+    #[ORM\Column(type: 'vector', nullable: true)]
     private ?string $embedding = null;
 
     #[ORM\Column(options: ['default' => 0])]
