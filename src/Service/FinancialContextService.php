@@ -257,11 +257,26 @@ class FinancialContextService
         \DateTime $startOfMonth,
         \DateTime $endOfMonth
     ): array {
+        $overlapping = array_filter(
+            $budgets,
+            static fn ($budget) => !($budget->getEndDate() < $startOfMonth || $budget->getStartDate() > $endOfMonth)
+        );
+
+        return $this->formatBudgetsForCategorySpending($overlapping, $categorySpending);
+    }
+
+    /**
+     * Maps already-filtered budgets into the {name, limit, spent} shape sent to the LLM.
+     * Shared by formatBudgets() (this-month, PHP-side overlap filter) and
+     * buildContextForPeriod() (arbitrary historical month, DB-side overlap filter via
+     * BudgetRepository::findOverlapping()) so the mapping logic isn't duplicated.
+     *
+     * @param iterable<\App\Entity\Budget> $budgets
+     */
+    private function formatBudgetsForCategorySpending(iterable $budgets, array $categorySpending): array
+    {
         $formatted = [];
         foreach ($budgets as $budget) {
-            if ($budget->getEndDate() < $startOfMonth || $budget->getStartDate() > $endOfMonth) {
-                continue;
-            }
             foreach ($budget->getBudgetCategories() as $budgetCategory) {
                 $categoryName = $budgetCategory->getCategory()->getName();
                 $limit = $budgetCategory->getAmount();
@@ -271,5 +286,99 @@ class FinancialContextService
         }
 
         return $formatted;
+    }
+
+    /**
+     * Builds the financial context for an arbitrary already-closed historical month
+     * (format YYYY-MM), for use by the analysis backfill command.
+     *
+     * financial_level is intentionally computed from the user's CURRENT digest/level
+     * (not a historical one) — it represents a slowly-changing trait (pedagogical tone
+     * calibration), not a per-month fact, and FinancialDigestService is not period-aware
+     * by design. Trend/velocity/consistency signals are simply omitted here since they
+     * are inherently "current month" concepts that don't apply to a closed past month.
+     */
+    public function buildContextForPeriod(User $user, string $period): array
+    {
+        $periodStart = new \DateTime($period . '-01');
+        $periodStart->setTime(0, 0, 0);
+        $periodEnd = (clone $periodStart)->modify('last day of this month');
+        $periodEnd->setTime(23, 59, 59);
+
+        $totals = $this->getMonthTotals($user, $period);
+        $categorySpending = $this->getMonthCategorySpending($user, $period);
+        $savingsRate = $this->calculateSavingRate($totals['income'], $totals['expenses']);
+
+        $categories = array_map(
+            static fn (string $name, float $amount) => ['name' => $name, 'amount' => $amount],
+            array_keys($categorySpending),
+            array_values($categorySpending)
+        );
+
+        $budgets = $this->budgetRepository->findOverlapping($user, $periodStart, $periodEnd);
+        $formattedBudgets = $this->formatBudgetsForCategorySpending($budgets, $categorySpending);
+
+        $previousPeriod = (clone $periodStart)->modify('-1 month')->format('Y-m');
+        $previousTotals = $this->getMonthTotals($user, $previousPeriod);
+        $previousSavingsRate = $this->calculateSavingRate($previousTotals['income'], $previousTotals['expenses']);
+
+        $topTip = $this->tipRepository->findOneBy([], ['id' => 'DESC']);
+
+        $digest = $this->digestService->getDigest($user);
+        $financialLevel = $this->digestService->computeFinancialLevel($user, $digest);
+
+        $allCategories = array_map(
+            static fn ($cat) => $cat->getName(),
+            $this->categoryRepository->findAll()
+        );
+
+        return [
+            'userContext' => [
+                'currency' => 'COP',
+                'locale' => 'es-CO',
+                'financial_level' => $financialLevel,
+            ],
+            'summary' => [
+                'period' => $period,
+                'total_income' => $totals['income'],
+                'total_expenses' => $totals['expenses'],
+                'savings_rate' => $savingsRate,
+                'previous_savings_rate' => $previousSavingsRate,
+                'previous_income' => $previousTotals['income'],
+                'previous_expenses' => $previousTotals['expenses'],
+            ],
+            'categories' => $categories,
+            'budgets' => $formattedBudgets,
+            'top_tip' => $topTip ? $topTip->getTitle() . ': ' . $topTip->getShortDescription() : null,
+            'available_categories' => $allCategories,
+        ];
+    }
+
+    /**
+     * @return array{income: float, expenses: float}
+     */
+    private function getMonthTotals(User $user, string $period): array
+    {
+        $rows = $this->transactionRepository->getMonthlyTotalsForRange($user, $period, $period);
+        $row = $rows[0] ?? null;
+
+        return [
+            'income' => $row['income'] ?? 0.0,
+            'expenses' => $row['expenses'] ?? 0.0,
+        ];
+    }
+
+    /**
+     * @return array<string, float> category name => total spent
+     */
+    private function getMonthCategorySpending(User $user, string $period): array
+    {
+        $rows = $this->transactionRepository->getMonthlyCategorySpendingForRange($user, $period, $period);
+        $spending = [];
+        foreach ($rows as $row) {
+            $spending[$row['category']] = $row['total'];
+        }
+
+        return $spending;
     }
 }

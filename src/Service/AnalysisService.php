@@ -76,6 +76,57 @@ class AnalysisService
     }
 
     /**
+     * Generates the pedagogical financial analysis for a single already-closed historical
+     * month ($period, format YYYY-MM). Always called with checkpoint "end" for backfill —
+     * an "end" analysis for a still-open month would be semantically wrong, and "mid" makes
+     * no sense once a month is closed.
+     * Skips generation if an analysis already exists for that period+checkpoint.
+     * Unlike generateForUser(), NEVER calls notificationService->createForAnalysis() —
+     * backfilled analyses for past months must not spam users with "new analysis" alerts.
+     * Returns null if generation was skipped or the LLM returned no content.
+     */
+    public function generateForPeriod(User $user, string $period, string $checkpoint = 'end'): ?FinancialAnalysis
+    {
+        if ($this->analysisRepository->findOneByUserPeriodCheckpoint($user, $period, $checkpoint)) {
+            return null;
+        }
+
+        $context = $this->contextService->buildContextForPeriod($user, $period);
+        $goal = $this->buildGoal($checkpoint);
+
+        $response = $this->httpClient->request('POST', $this->llmServiceUrl . '/llm/financial-insights', [
+            'json' => [
+                'user_context' => $context['userContext'],
+                'summary' => $context['summary'],
+                'categories' => $context['categories'],
+                'budgets' => $context['budgets'],
+                'top_tip' => $context['top_tip'],
+                'goal' => $goal,
+            ],
+            'timeout' => 300,
+            'max_duration' => 300,
+        ]);
+
+        $data = $response->toArray();
+        $content = $data['insights'][0]['message'] ?? null;
+
+        if (!$content) {
+            return null;
+        }
+
+        $analysis = new FinancialAnalysis();
+        $analysis->setUser($user);
+        $analysis->setPeriod($period);
+        $analysis->setCheckpoint($checkpoint);
+        $analysis->setContent($content);
+
+        $this->entityManager->persist($analysis);
+        $this->entityManager->flush();
+
+        return $analysis;
+    }
+
+    /**
      * Returns all FinancialAnalysis records for the given user, ordered by generation date descending.
      *
      * @return FinancialAnalysis[]

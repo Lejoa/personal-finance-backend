@@ -451,4 +451,34 @@ class TransactionRepository extends ServiceEntityRepository
             $rows,
         );
     }
+
+    /**
+     * Returns distinct YYYY-MM months for which the user has at least one transaction,
+     * strictly before $beforeMonth (exclusive), ordered ascending.
+     *
+     * Used to discover historical months eligible for analysis backfill — the boundary
+     * is expressed in the SQL WHERE clause (not filtered in PHP after fetching) so that
+     * the current, still-open month is never pulled from the DB at all.
+     *
+     * @return string[] e.g. ['2025-01', '2025-02', '2025-03']
+     */
+    public function getDistinctMonthsBefore(User $user, string $beforeMonth): array
+    {
+        $conn = $this->getEntityManager()->getConnection();
+
+        $sql = "
+            SELECT DISTINCT TO_CHAR(t.date, 'YYYY-MM') AS month
+            FROM transactions t
+            WHERE t.user_id = :userId
+              AND TO_CHAR(t.date, 'YYYY-MM') < :beforeMonth
+            ORDER BY month ASC
+        ";
+
+        $rows = $conn->fetchAllAssociative($sql, [
+            'userId' => $user->getId(),
+            'beforeMonth' => $beforeMonth,
+        ]);
+
+        return array_map(static fn (array $row): string => $row['month'], $rows);
+    }
 }

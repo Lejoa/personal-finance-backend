@@ -101,6 +101,96 @@ class FinancialContextServiceTest extends TestCase
         $this->assertIsArray($result['available_categories']);
     }
 
+    // ── buildContextForPeriod ────────────────────────────────────────────────
+
+    public function testBuildContextForPeriodReturnsExpectedStructure(): void
+    {
+        $this->stubBuildContextForPeriod();
+
+        $result = $this->service->buildContextForPeriod($this->makeUser(), '2025-03');
+
+        $this->assertArrayHasKey('userContext', $result);
+        $this->assertArrayHasKey('summary', $result);
+        $this->assertArrayHasKey('categories', $result);
+        $this->assertArrayHasKey('budgets', $result);
+        $this->assertArrayHasKey('top_tip', $result);
+        $this->assertArrayHasKey('available_categories', $result);
+    }
+
+    public function testBuildContextForPeriodSummaryUsesGivenPeriod(): void
+    {
+        $this->stubBuildContextForPeriod();
+
+        $result = $this->service->buildContextForPeriod($this->makeUser(), '2025-03');
+
+        $this->assertSame('2025-03', $result['summary']['period']);
+    }
+
+    public function testBuildContextForPeriodComputesPreviousMonthFromGivenPeriod(): void
+    {
+        $seenRanges = [];
+        $this->transactionRepo->method('getMonthlyTotalsForRange')
+            ->willReturnCallback(static function ($user, $from, $to) use (&$seenRanges) {
+                $seenRanges[] = [$from, $to];
+
+                return [];
+            });
+        $this->transactionRepo->method('getMonthlyCategorySpendingForRange')->willReturn([]);
+        $this->budgetRepo->method('findOverlapping')->willReturn([]);
+        $this->tipRepo->method('findOneBy')->willReturn(null);
+        $this->digestService->method('getDigest')->willReturn([]);
+        $this->digestService->method('computeFinancialLevel')->willReturn('principiante');
+        $this->categoryRepo->method('findAll')->willReturn([]);
+
+        $this->service->buildContextForPeriod($this->makeUser(), '2025-03');
+
+        $this->assertContains(['2025-03', '2025-03'], $seenRanges);
+        $this->assertContains(['2025-02', '2025-02'], $seenRanges);
+    }
+
+    public function testBuildContextForPeriodDefaultsToZeroWhenNoTransactionsInPreviousMonth(): void
+    {
+        $this->transactionRepo->method('getMonthlyTotalsForRange')
+            ->willReturnCallback(static fn ($user, $from, $to) => '2025-03' === $from
+                ? [['month' => '2025-03', 'income' => 900000.0, 'expenses' => 400000.0]]
+                : []);
+        $this->transactionRepo->method('getMonthlyCategorySpendingForRange')->willReturn([]);
+        $this->budgetRepo->method('findOverlapping')->willReturn([]);
+        $this->tipRepo->method('findOneBy')->willReturn(null);
+        $this->digestService->method('getDigest')->willReturn([]);
+        $this->digestService->method('computeFinancialLevel')->willReturn('principiante');
+        $this->categoryRepo->method('findAll')->willReturn([]);
+
+        $result = $this->service->buildContextForPeriod($this->makeUser(), '2025-03');
+
+        $this->assertSame(900000.0, $result['summary']['total_income']);
+        $this->assertSame(400000.0, $result['summary']['total_expenses']);
+        $this->assertSame(0.0, $result['summary']['previous_income']);
+        $this->assertSame(0.0, $result['summary']['previous_expenses']);
+    }
+
+    public function testBuildContextForPeriodBudgetsUseFindOverlappingNotFindBy(): void
+    {
+        $this->stubBuildContextForPeriod();
+
+        $this->budgetRepo->expects($this->once())->method('findOverlapping');
+        $this->budgetRepo->expects($this->never())->method('findBy');
+
+        $this->service->buildContextForPeriod($this->makeUser(), '2025-03');
+    }
+
+    public function testBuildContextForPeriodFinancialLevelUsesCurrentDigest(): void
+    {
+        $this->stubBuildContextForPeriod(financialLevel: 'avanzado');
+
+        $this->digestService->expects($this->once())->method('getDigest');
+        $this->digestService->expects($this->once())->method('computeFinancialLevel');
+
+        $result = $this->service->buildContextForPeriod($this->makeUser(), '2025-03');
+
+        $this->assertSame('avanzado', $result['userContext']['financial_level']);
+    }
+
     // ── buildAdditionalContext ──────────────────────────────────────────────
 
     public function testBuildAdditionalContextReturnsEmptyStringForNone(): void
@@ -259,6 +349,21 @@ class FinancialContextServiceTest extends TestCase
             'expenses' => $previousExpenses,
         ]);
         $this->budgetRepo->method('findBy')->willReturn([]);
+        $this->tipRepo->method('findOneBy')->willReturn(null);
+        $this->digestService->method('getDigest')->willReturn([]);
+        $this->digestService->method('computeFinancialLevel')->willReturn($financialLevel);
+        $this->categoryRepo->method('findAll')->willReturn([]);
+    }
+
+    /**
+     * Stubs the dependencies used by buildContextForPeriod() with sensible defaults
+     * so individual tests only need to override what they are testing.
+     */
+    private function stubBuildContextForPeriod(string $financialLevel = 'principiante'): void
+    {
+        $this->transactionRepo->method('getMonthlyTotalsForRange')->willReturn([]);
+        $this->transactionRepo->method('getMonthlyCategorySpendingForRange')->willReturn([]);
+        $this->budgetRepo->method('findOverlapping')->willReturn([]);
         $this->tipRepo->method('findOneBy')->willReturn(null);
         $this->digestService->method('getDigest')->willReturn([]);
         $this->digestService->method('computeFinancialLevel')->willReturn($financialLevel);

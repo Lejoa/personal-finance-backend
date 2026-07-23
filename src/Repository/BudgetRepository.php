@@ -32,4 +32,23 @@ class BudgetRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
+
+    /**
+     * Returns all of the user's budgets whose [startDate, endDate] range overlaps
+     * the given [start, end] window (inclusive on both sides).
+     *
+     * @return Budget[]
+     */
+    public function findOverlapping(User $user, \DateTimeInterface $start, \DateTimeInterface $end): array
+    {
+        return $this->createQueryBuilder('b')
+            ->where('b.user = :user')
+            ->andWhere('b.startDate <= :end')
+            ->andWhere('b.endDate >= :start')
+            ->setParameter('user', $user)
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->getQuery()
+            ->getResult();
+    }
 }
