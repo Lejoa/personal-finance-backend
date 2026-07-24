@@ -18,6 +18,14 @@ class FinancialAnalysisRepository extends ServiceEntityRepository
     }
 
     /**
+     * Returns the user's analyses ordered by the financial period they describe
+     * (most recent month first), not by when they were computed — a backfilled
+     * analysis for an older month can be generated after a newer month's analysis,
+     * so sorting by generatedAt alone would show it out of chronological order.
+     * generatedAt is only the tiebreaker for two analyses of the same period
+     * (e.g. 'mid' and 'end' checkpoints), where it correctly reflects that 'end'
+     * is always generated after 'mid' for the same month.
+     *
      * @return FinancialAnalysis[]
      */
     public function findByUser(User $user): array
@@ -25,7 +33,8 @@ class FinancialAnalysisRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('a')
             ->where('a.user = :user')
             ->setParameter('user', $user)
-            ->orderBy('a.generatedAt', 'DESC')
+            ->orderBy('a.period', 'DESC')
+            ->addOrderBy('a.generatedAt', 'DESC')
             ->getQuery()
             ->getResult();
     }
