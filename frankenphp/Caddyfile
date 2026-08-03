@@ -1,12 +1,6 @@
 {
 	skip_install_trust
 
-	# Internal Docker-network traffic (e.g. llm-service calling the backend via
-	# http://php:80) must not be redirected to HTTPS — only external/public
-	# clients need the TLS upgrade. HTTPS certificates are still auto-provisioned
-	# and served normally; this only stops the automatic HTTP->HTTPS redirect.
-	auto_https disable_redirects
-
 	{$CADDY_GLOBAL_OPTIONS}
 
 	frankenphp {
@@ -22,7 +16,12 @@
 
 {$CADDY_EXTRA_CONFIG}
 
-{$SERVER_NAME:localhost} {
+# Internal Docker-network traffic (e.g. llm-service calling the backend via
+# http://php:80) needs the routes served directly over plain HTTP — Caddy's
+# automatic HTTPS otherwise only opens port 80 for the redirect/ACME challenge,
+# not for serving the app. Declaring "http://" explicitly here serves this
+# same site over both HTTP and HTTPS instead of redirecting HTTP away.
+http://{$SERVER_NAME:localhost}, {$SERVER_NAME:localhost} {
 	log {
 		{$CADDY_SERVER_LOG_OPTIONS}
 		# Redact the authorization query parameter that can be set by Mercure
