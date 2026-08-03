@@ -1,6 +1,12 @@
 {
 	skip_install_trust
 
+	# Internal Docker-network traffic (e.g. llm-service calling the backend via
+	# http://php:80) must not be redirected to HTTPS — only external/public
+	# clients need the TLS upgrade. HTTPS certificates are still auto-provisioned
+	# and served normally; this only stops the automatic HTTP->HTTPS redirect.
+	auto_https disable_redirects
+
 	{$CADDY_GLOBAL_OPTIONS}
 
 	frankenphp {

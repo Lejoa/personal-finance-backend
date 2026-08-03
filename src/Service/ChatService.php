@@ -453,9 +453,11 @@ class ChatService
                 'context_type' => $data['context_type'] ?? 'none',
                 'period_hint'  => $data['period_hint'] ?? null,
             ];
-        } catch (\RuntimeException $e) {
-            throw $e;
         } catch (\Exception $e) {
+            if (422 === $e->getCode()) {
+                throw $e;
+            }
+
             $this->logger->warning('Context classification failed, defaulting to none', [
                 'error' => $e->getMessage(),
             ]);
