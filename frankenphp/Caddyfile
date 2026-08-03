@@ -21,7 +21,13 @@
 # automatic HTTPS otherwise only opens port 80 for the redirect/ACME challenge,
 # not for serving the app. Declaring "http://" explicitly here serves this
 # same site over both HTTP and HTTPS instead of redirecting HTTP away.
-http://{$SERVER_NAME:localhost}, {$SERVER_NAME:localhost} {
+#
+# "http://php" is also listed because internal callers (llm-service) reach
+# this container via its Docker Compose service name, not the public domain —
+# Caddy matches site blocks by the request's Host header, so without this the
+# request falls through to Caddy's global default, which still redirects any
+# unmatched host to HTTPS.
+http://{$SERVER_NAME:localhost}, {$SERVER_NAME:localhost}, http://php {
 	log {
 		{$CADDY_SERVER_LOG_OPTIONS}
 		# Redact the authorization query parameter that can be set by Mercure
