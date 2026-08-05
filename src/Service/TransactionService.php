@@ -52,6 +52,13 @@ class TransactionService
             $transaction->setSource($dto->source);
         }
 
+        if (null !== $dto->categoryId) {
+            $category = $this->categoryRepository->find($dto->categoryId);
+            if ($category) {
+                $transaction->setCategory($category);
+            }
+        }
+
         $this->entityManager->persist($transaction);
         $this->entityManager->flush();
 

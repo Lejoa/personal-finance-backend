@@ -51,6 +51,8 @@ class CreateTransactionRequest
     )]
     public ?string $note = null;
 
+    public ?int $categoryId = null;
+
     #[Assert\Choice(
         choices: ['pending', 'done', 'rejected'],
         message: 'El estado debe ser "pending", "done" o "rejected".'
